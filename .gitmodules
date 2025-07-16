@@ -16,3 +16,6 @@
 [submodule "modules/mod-player-bot-level-brackets"]
 	path = modules/mod-player-bot-level-brackets
 	url = git@github.com:DustinHendrickson/mod-player-bot-level-brackets.git
+[submodule "modules/--branch=master"]
+	path = modules/--branch=master
+	url = https://github.com/liyunfan1223/mod-playerbots.git
