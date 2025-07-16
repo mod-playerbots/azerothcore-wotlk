@@ -19,15 +19,15 @@
 /env/dist/logs/*
 !/env/dist/.gitkeep
 /env/user/*
-#/
+
 /apps/joiner
 /deps/deno
 /data/sql/custom/*
 /src/server/scripts/Custom/*
 !/src/server/scripts/Custom/README.md
 
-/*.override.yml
-/*.override.yaml
+
+
 
 !.gitkeep
 
