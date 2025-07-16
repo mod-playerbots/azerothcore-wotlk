@@ -1,21 +1,24 @@
 [submodule "modules/mod-playerbots"]
 	path = modules/mod-playerbots
 	url = https://github.com/liyunfan1223/mod-playerbots.git
+	branch = master
 [submodule "modules/mod-ah-bot"]
 	path = modules/mod-ah-bot
 	url = git@github.com:azerothcore/mod-ah-bot.git
+	branch = master
 [submodule "modules/mod-individual-progression"]
 	path = modules/mod-individual-progression
 	url = git@github.com:ZhengPeiRu21/mod-individual-progression.git
+	branch = master
 [submodule "modules/mod-learn-spells"]
 	path = modules/mod-learn-spells
 	url = git@github.com:azerothcore/mod-learn-spells.git
+	branch = master
 [submodule "modules/mod-junk-to-gold"]
 	path = modules/mod-junk-to-gold
 	url = git@github.com:noisiver/mod-junk-to-gold.git
+	branch = master
 [submodule "modules/mod-player-bot-level-brackets"]
 	path = modules/mod-player-bot-level-brackets
 	url = git@github.com:DustinHendrickson/mod-player-bot-level-brackets.git
-[submodule "modules/--branch=master"]
-	path = modules/--branch=master
-	url = https://github.com/liyunfan1223/mod-playerbots.git
+	branch = main
