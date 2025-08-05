@@ -7,8 +7,15 @@ services:
     privileged: true
     environment:
       AC_LOGIN_DATABASE_INFO: "192.168.144.7;3306;root;${DOCKER_DB_ROOT_PASSWORD:-password};acore_auth"
+      AC_AI_PLAYERBOT_ENABLED: 1
+      AC_AI_PLAYERBOT_ENABLE_BROADCASTS: 0
+      AC_OLLAMA_CHAT_DEBUG_ENABLED: 1
+      AC_OLLAMA_CHAT_MODEL: llama3.1:latest # Modify if needed
+      AC_OLLAMA_CHAT_URL: http://ac-ollamaserver:11434/api/generate
     volumes:
       - ./modules:/azerothcore/modules:ro
+    networks:
+      - azerothcore-wotlk_ac-network
 
 #  ac-authserver:
 #    environment:
@@ -18,25 +25,22 @@ services:
     environment:
       AC_LOGIN_DATABASE_INFO: "192.168.144.7;3306;root;${DOCKER_DB_ROOT_PASSWORD:-password};acore_auth"
 
-  ac-ollama:
-    image: ollama/ollama:latest
-    container_name: ac-ollama
-    networks:
-      - ac-network
-    ports:
-      - "11435:11434"
-    environment:
-      - OLLAMA_HOST=0.0.0.0
+  ac-ollamaserver:
+    image: ollama/ollama
+    container_name: ac-ollamaserver
     volumes:
-      - ac-ollama-data:/root/.ollama
-    tty: true
+      - ollama:/root/.ollama
+    ports:
+      - "11434:11434"
+    networks:
+      - azerothcore-wotlk_ac-network
     restart: unless-stopped
-    entrypoint: [ "/bin/bash", "-c", "\
-      ollama serve & \
-      sleep 5 && \
-      ollama pull llama3.2:1b && \
-      wait" ]
+    command: ["ollama", "serve"]
 
 volumes:
-  ac-ollama-data:
-    name: ac-ollama-data
+  ollama:
+
+networks:
+  azerothcore-wotlk_ac-network:
+    external: true
+    name: azerothcore-wotlk_ac-network
