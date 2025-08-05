@@ -1,0 +1,42 @@
+services:
+  ac-db-import:
+    environment:
+      AC_LOGIN_DATABASE_INFO: "192.168.144.7;3306;root;${DOCKER_DB_ROOT_PASSWORD:-password};acore_auth"
+
+  ac-worldserver:
+    privileged: true
+    environment:
+      AC_LOGIN_DATABASE_INFO: "192.168.144.7;3306;root;${DOCKER_DB_ROOT_PASSWORD:-password};acore_auth"
+    volumes:
+      - ./modules:/azerothcore/modules:ro
+
+#  ac-authserver:
+#    environment:
+#      AC_LOGIN_DATABASE_INFO: "192.168.144.7;3306;root;${DOCKER_DB_ROOT_PASSWORD:-password};acore_auth"
+
+  ac-dev-server:
+    environment:
+      AC_LOGIN_DATABASE_INFO: "192.168.144.7;3306;root;${DOCKER_DB_ROOT_PASSWORD:-password};acore_auth"
+
+  ac-ollama:
+    image: ollama/ollama:latest
+    container_name: ac-ollama
+    networks:
+      - ac-network
+    ports:
+      - "11435:11434"
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    volumes:
+      - ac-ollama-data:/root/.ollama
+    tty: true
+    restart: unless-stopped
+    entrypoint: [ "/bin/bash", "-c", "\
+      ollama serve & \
+      sleep 5 && \
+      ollama pull llama3.2:1b && \
+      wait" ]
+
+volumes:
+  ac-ollama-data:
+    name: ac-ollama-data
