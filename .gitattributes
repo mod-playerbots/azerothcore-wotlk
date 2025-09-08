@@ -28,3 +28,5 @@
 
 # Ignore sql/* files
 data/sql/*    linguist-documentation
+
+
