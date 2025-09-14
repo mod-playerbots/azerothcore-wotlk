@@ -235,17 +235,6 @@ enum ActionButtonType
     ACTION_BUTTON_ITEM      = 0x80
 };
 
-enum ReputationSource
-{
-    REPUTATION_SOURCE_KILL,
-    REPUTATION_SOURCE_QUEST,
-    REPUTATION_SOURCE_DAILY_QUEST,
-    REPUTATION_SOURCE_WEEKLY_QUEST,
-    REPUTATION_SOURCE_MONTHLY_QUEST,
-    REPUTATION_SOURCE_REPEATABLE_QUEST,
-    REPUTATION_SOURCE_SPELL
-};
-
 enum QuestSound
 {
     QUEST_SOUND_FAILURE = 847
@@ -1682,7 +1671,7 @@ public:
 
     bool RemoveMItem(ObjectGuid::LowType itemLowGuid)
     {
-        return !!mMitems.erase(itemLowGuid);
+        return mMitems.erase(itemLowGuid);
     }
 
     void PetSpellInitialize();
@@ -2033,7 +2022,6 @@ public:
 
     void SendMessageToSet(WorldPacket const* data, bool self) const override;
     void SendMessageToSetInRange(WorldPacket const* data, float dist, bool self) const override;
-    void SendMessageToSetInRange(WorldPacket const* data, float dist, bool self, bool includeMargin, bool ownTeamOnly, bool required3dDist = false) const;
     void SendMessageToSet(WorldPacket const* data, Player const* skipped_rcvr) const override;
     void SendTeleportAckPacket();
 
@@ -2208,6 +2196,10 @@ public:
     void _RemoveAllStatBonuses();
 
     void ResetAllPowers();
+
+    void CastAllObtainSpells();
+    void ApplyItemObtainSpells(Item* item, bool apply);
+    void UpdateItemObtainSpells(Item* item, uint8 bag, uint8 slot);
 
     SpellSchoolMask GetMeleeDamageSchoolMask(WeaponAttackType attackType = BASE_ATTACK, uint8 damageIndex = 0) const override;
 
@@ -2388,7 +2380,6 @@ public:
     void SetEntryPoint();
 
     // currently visible objects at player client
-    GuidUnorderedSet m_clientGUIDs;
     std::vector<Unit*> m_newVisible; // pussywizard
 
     [[nodiscard]] bool HaveAtClient(WorldObject const* u) const;
@@ -2630,12 +2621,13 @@ public:
     [[nodiscard]] Optional<float> GetFarSightDistance() const;
 
     float GetSightRange(WorldObject const* target = nullptr) const override;
+    bool IsWorldObjectOutOfSightRange(WorldObject const* target) const;
 
     std::string GetPlayerName();
 
     // Settings
-    [[nodiscard]] PlayerSetting GetPlayerSetting(std::string const& source, uint8 index);
-    void UpdatePlayerSetting(std::string const& source, uint8 index, uint32 value);
+    [[nodiscard]] PlayerSetting GetPlayerSetting(std::string const& source, uint32 index);
+    void UpdatePlayerSetting(std::string const& source, uint32 index, uint32 value);
 
     void SendSystemMessage(std::string_view msg, bool escapeCharacters = false);
 

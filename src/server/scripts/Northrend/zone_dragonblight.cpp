@@ -1067,7 +1067,7 @@ public:
                 go->Delete();
             WretchedGhoulCleaner cleaner;
             Acore::CreatureWorker<WretchedGhoulCleaner> worker(me, cleaner);
-            Cell::VisitGridObjects(me, worker, 150.0f);
+            Cell::VisitObjects(me, worker, 150.0f);
         }
 
         void Reset() override
@@ -1281,7 +1281,7 @@ public:
                     {
                         WretchedGhoulCleaner cleaner;
                         Acore::CreatureWorker<WretchedGhoulCleaner> worker(me, cleaner);
-                        Cell::VisitGridObjects(me, worker, 150.0f);
+                        Cell::VisitObjects(me, worker, 150.0f);
 
                         if (Creature* c = me->FindNearestCreature(NPC_SAC_LIGHTS_VENGEANCE, 150.0f, true))
                             if (Creature* v = me->FindNearestCreature(NPC_SAC_VEGARD_1, 50.0f, true))
@@ -2240,6 +2240,27 @@ class spell_dragonblight_corrosive_spit : public AuraScript
     }
 };
 
+// 48297 - Hand Over Reins
+enum HandOverReins
+{
+    SPELL_ONSLAUGHT_RIDING_CROP = 48290
+};
+
+class spell_handover_reins : public SpellScript
+{
+    PrepareSpellScript(spell_handover_reins);
+
+    void HandleScriptEffect(SpellEffIndex /*effIndex*/)
+    {
+        GetCaster()->RemoveAura(SPELL_ONSLAUGHT_RIDING_CROP);
+    }
+
+    void Register() override
+    {
+        OnEffectHitTarget += SpellEffectFn(spell_handover_reins::HandleScriptEffect, EFFECT_1, SPELL_EFFECT_SCRIPT_EFFECT);
+    }
+};
+
 void AddSC_dragonblight()
 {
     new npc_conversing_with_the_depths_trigger();
@@ -2267,4 +2288,5 @@ void AddSC_dragonblight()
     RegisterSpellScript(spell_q12096_q12092_bark);
     new npc_torturer_lecraft();
     RegisterSpellScript(spell_dragonblight_corrosive_spit);
+    RegisterSpellScript(spell_handover_reins);
 }
