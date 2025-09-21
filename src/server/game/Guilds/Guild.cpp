@@ -2209,9 +2209,13 @@ bool Guild::AddMember(ObjectGuid guid, uint8 rankId)
     Player* player = ObjectAccessor::FindConnectedPlayer(guid);
 
     Player* leader = nullptr;
-    if (this->GetLeaderGUID())
+    if (m_leaderGuid)
     {
-        leader = ObjectAccessor::FindConnectedPlayer(this->GetLeaderGUID());
+        Member* pLeader = GetMember(m_leaderGuid);
+        if (pLeader)
+        {
+            leader = pLeader->FindPlayer();
+        }
     }
 
     // Player cannot be in guild
