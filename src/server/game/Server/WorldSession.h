@@ -602,6 +602,9 @@ public:
     void ResetTimeSync();
     void SendTimeSync();
 
+    // Movement packet order
+    uint32 GetOrderCounter() const { return _orderCounter; }
+    void IncrementOrderCounter() { ++_orderCounter; }
 public:                                                 // opcodes handlers
     void Handle_NULL(WorldPacket& null);                // not used
     void Handle_EarlyProccess(WorldPacket& recvPacket); // just mark packets processed in WorldSocket::OnRead
@@ -639,11 +642,6 @@ public:                                                 // opcodes handlers
 
     // new party stats
     void HandleInspectHonorStatsOpcode(WorldPacket& recvPacket);
-
-    void HandleMoveWaterWalkAck(WorldPacket& recvPacket);
-    void HandleFeatherFallAck(WorldPacket& recvData);
-
-    void HandleMoveHoverAck(WorldPacket& recvData);
 
     void HandleMountSpecialAnimOpcode(WorldPacket& recvdata);
 
@@ -989,7 +987,7 @@ public:                                                 // opcodes handlers
     void HandleFarSightOpcode(WorldPacket& recvData);
     void HandleSetDungeonDifficultyOpcode(WorldPacket& recvData);
     void HandleSetRaidDifficultyOpcode(WorldPacket& recvData);
-    void HandleMoveSetCanFlyAckOpcode(WorldPacket& recvData);
+    void HandleMoveFlagChangeOpcode(WorldPacket& recvData);
     void HandleSetTitleOpcode(WorldPacket& recvData);
     void HandleRealmSplitOpcode(WorldPacket& recvData);
     void HandleTimeSyncResp(WorldPacket& recvData);
@@ -1265,6 +1263,8 @@ private:
     std::map<uint32, uint32> _pendingTimeSyncRequests; // key: counter. value: server time when packet with that counter was sent.
     uint32 _timeSyncNextCounter;
     uint32 _timeSyncTimer;
+
+    uint32 _orderCounter;
 
     bool _isBot;
 

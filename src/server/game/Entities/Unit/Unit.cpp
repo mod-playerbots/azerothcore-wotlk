@@ -868,6 +868,9 @@ uint32 Unit::DealDamage(Unit* attacker, Unit* victim, uint32 damage, CleanDamage
         // interrupting auras with AURA_INTERRUPT_FLAG_DAMAGE before checking !damage (absorbed damage breaks that type of auras)
         if (spellProto)
         {
+            if (attacker && damagetype != DOT && spellProto->DmgClass == SPELL_DAMAGE_CLASS_MELEE && !(spellProto->GetSchoolMask() & SPELL_SCHOOL_MASK_HOLY))
+                attacker->DealDamageShieldDamage(victim);
+
             if (!spellProto->HasAttribute(SPELL_ATTR4_REACTIVE_DAMAGE_PROC))
                 victim->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_TAKE_DAMAGE, spellProto->Id);
         }
@@ -1975,57 +1978,60 @@ void Unit::DealMeleeDamage(CalcDamageInfo* damageInfo, bool durabilityLoss)
 
     // Do effect if any damage done to target
     if (damageInfo->damages[0].damage + damageInfo->damages[1].damage)
+        DealDamageShieldDamage(victim);
+}
+
+void Unit::DealDamageShieldDamage(Unit* victim)
+{
+    // We're going to call functions which can modify content of the list during iteration over it's elements
+    // Let's copy the list so we can prevent iterator invalidation
+    AuraEffectList vDamageShieldsCopy(victim->GetAuraEffectsByType(SPELL_AURA_DAMAGE_SHIELD));
+    for (AuraEffectList::const_iterator dmgShieldItr = vDamageShieldsCopy.begin(); dmgShieldItr != vDamageShieldsCopy.end(); ++dmgShieldItr)
     {
-        // We're going to call functions which can modify content of the list during iteration over it's elements
-        // Let's copy the list so we can prevent iterator invalidation
-        AuraEffectList vDamageShieldsCopy(victim->GetAuraEffectsByType(SPELL_AURA_DAMAGE_SHIELD));
-        for (AuraEffectList::const_iterator dmgShieldItr = vDamageShieldsCopy.begin(); dmgShieldItr != vDamageShieldsCopy.end(); ++dmgShieldItr)
+        SpellInfo const* i_spellProto = (*dmgShieldItr)->GetSpellInfo();
+        // Damage shield can be resisted...
+        if (SpellMissInfo missInfo = victim->SpellHitResult(this, i_spellProto, false))
         {
-            SpellInfo const* i_spellProto = (*dmgShieldItr)->GetSpellInfo();
-            // Damage shield can be resisted...
-            if (SpellMissInfo missInfo = victim->SpellHitResult(this, i_spellProto, false))
-            {
-                victim->SendSpellMiss(this, i_spellProto->Id, missInfo);
-                continue;
-            }
-
-            // ...or immuned
-            if (IsImmunedToDamageOrSchool(i_spellProto))
-            {
-                victim->SendSpellDamageImmune(this, i_spellProto->Id);
-                continue;
-            }
-
-            uint32 damage = uint32(std::max(0, (*dmgShieldItr)->GetAmount())); // xinef: done calculated at amount calculation
-
-            if (Unit* caster = (*dmgShieldItr)->GetCaster())
-            {
-                damage = caster->SpellDamageBonusDone(this, i_spellProto, damage, SPELL_DIRECT_DAMAGE, (*dmgShieldItr)->GetEffIndex());
-                damage = this->SpellDamageBonusTaken(caster, i_spellProto, damage, SPELL_DIRECT_DAMAGE);
-            }
-
-            uint32 absorb = 0;
-
-            DamageInfo dmgInfo(victim, this, damage, i_spellProto, i_spellProto->GetSchoolMask(), SPELL_DIRECT_DAMAGE);
-            Unit::CalcAbsorbResist(dmgInfo);
-            absorb = dmgInfo.GetAbsorb();
-            damage = dmgInfo.GetDamage();
-
-            Unit::DealDamageMods(this, damage, &absorb);
-
-            /// @todo: Move this to a packet handler
-            WorldPacket data(SMSG_SPELLDAMAGESHIELD, (8 + 8 + 4 + 4 + 4 + 4));
-            data << victim->GetGUID();
-            data << GetGUID();
-            data << uint32(i_spellProto->Id);
-            data << uint32(damage);                  // Damage
-            int32 overkill = int32(damage) - int32(GetHealth());
-            data << uint32(overkill > 0 ? overkill : 0); // Overkill
-            data << uint32(i_spellProto->GetSchoolMask());
-            victim->SendMessageToSet(&data, true);
-
-            Unit::DealDamage(victim, this, damage, 0, SPELL_DIRECT_DAMAGE, i_spellProto->GetSchoolMask(), i_spellProto, true);
+            victim->SendSpellMiss(this, i_spellProto->Id, missInfo);
+            continue;
         }
+
+        // ...or immuned
+        if (IsImmunedToDamageOrSchool(i_spellProto))
+        {
+            victim->SendSpellDamageImmune(this, i_spellProto->Id);
+            continue;
+        }
+
+        uint32 damage = uint32(std::max(0, (*dmgShieldItr)->GetAmount())); // xinef: done calculated at amount calculation
+
+        if (Unit* caster = (*dmgShieldItr)->GetCaster())
+        {
+            damage = caster->SpellDamageBonusDone(this, i_spellProto, damage, SPELL_DIRECT_DAMAGE, (*dmgShieldItr)->GetEffIndex());
+            damage = this->SpellDamageBonusTaken(caster, i_spellProto, damage, SPELL_DIRECT_DAMAGE);
+        }
+
+        uint32 absorb = 0;
+
+        DamageInfo dmgInfo(victim, this, damage, i_spellProto, i_spellProto->GetSchoolMask(), SPELL_DIRECT_DAMAGE);
+        Unit::CalcAbsorbResist(dmgInfo);
+        absorb = dmgInfo.GetAbsorb();
+        damage = dmgInfo.GetDamage();
+
+        Unit::DealDamageMods(this, damage, &absorb);
+
+        /// @todo: Move this to a packet handler
+        WorldPacket data(SMSG_SPELLDAMAGESHIELD, (8 + 8 + 4 + 4 + 4 + 4));
+        data << victim->GetGUID();
+        data << GetGUID();
+        data << uint32(i_spellProto->Id);
+        data << uint32(damage);                  // Damage
+        int32 overkill = int32(damage) - int32(GetHealth());
+        data << uint32(overkill > 0 ? overkill : 0); // Overkill
+        data << uint32(i_spellProto->GetSchoolMask());
+        victim->SendMessageToSet(&data, true);
+
+        Unit::DealDamage(victim, this, damage, 0, SPELL_DIRECT_DAMAGE, i_spellProto->GetSchoolMask(), i_spellProto, true);
     }
 }
 
@@ -4332,10 +4338,10 @@ void Unit::ProcessTerrainStatusUpdate()
 
     LiquidData const& liquidData = GetLiquidData();
 
-    // remove appropriate auras if we are swimming/not swimming respectively
-    if (liquidData.Status & MAP_LIQUID_STATUS_SWIMMING)
+    // remove appropriate auras if we are swimming/not swimming respectively - exact mirror of client logic
+    if (liquidData.Status & MAP_LIQUID_STATUS_SWIMMING && (liquidData.Level - GetPositionZ()) > GetCollisionHeight() * 0.75f) // Shallow water at ~75% of collision height)
         RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_NOT_ABOVEWATER);
-    else if (!isSwimming())
+    else
         RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_NOT_UNDERWATER);
 
     // liquid aura handling
@@ -10290,32 +10296,15 @@ ReputationRank Unit::GetFactionReactionTo(FactionTemplateEntry const* factionTem
         }
     }
 
-    return GetFactionReactionTo(factionTemplateEntry, targetFactionTemplateEntry);
-}
-
-ReputationRank Unit::GetFactionReactionTo(FactionTemplateEntry const* factionTemplateEntry, FactionTemplateEntry const* targetFactionTemplateEntry)
-{
     // common faction based check
     if (factionTemplateEntry->IsHostileTo(*targetFactionTemplateEntry))
-    {
         return REP_HOSTILE;
-    }
-
     if (factionTemplateEntry->IsFriendlyTo(*targetFactionTemplateEntry))
-    {
         return REP_FRIENDLY;
-    }
-
     if (targetFactionTemplateEntry->IsFriendlyTo(*factionTemplateEntry))
-    {
         return REP_FRIENDLY;
-    }
-
     if (factionTemplateEntry->factionFlags & FACTION_TEMPLATE_FLAG_HATES_ALL_EXCEPT_FRIENDS)
-    {
         return REP_HOSTILE;
-    }
-
     // neutral by default
     return REP_NEUTRAL;
 }
@@ -13624,9 +13613,10 @@ void Unit::Mount(uint32 mount, uint32 VehicleId, uint32 creatureEntry)
 
         WorldPacket data(SMSG_MOVE_SET_COLLISION_HGT, GetPackGUID().size() + 4 + 4);
         data << GetPackGUID();
-        data << uint32(GameTime::GetGameTime().count());   // Packet counter
+        data << player->GetSession()->GetOrderCounter(); // movement counter
         data << player->GetCollisionHeight();
         player->GetSession()->SendPacket(&data);
+        player->GetSession()->IncrementOrderCounter();
     }
 
     RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_MOUNT);
@@ -13640,13 +13630,14 @@ void Unit::Dismount()
     SetUInt32Value(UNIT_FIELD_MOUNTDISPLAYID, 0);
     RemoveUnitFlag(UNIT_FLAG_MOUNT);
 
-    if (Player* thisPlayer = ToPlayer())
+    if (Player* player = ToPlayer())
     {
         WorldPacket data(SMSG_MOVE_SET_COLLISION_HGT, GetPackGUID().size() + 4 + 4);
         data << GetPackGUID();
-        data << uint32(GameTime::GetGameTime().count());   // Packet counter
-        data << thisPlayer->GetCollisionHeight();
-        thisPlayer->GetSession()->SendPacket(&data);
+        data << player->GetSession()->GetOrderCounter(); // movement counter
+        data << player->GetCollisionHeight();
+        player->GetSession()->SendPacket(&data);
+        player->GetSession()->IncrementOrderCounter();
     }
 
     WorldPacket data(SMSG_DISMOUNT, 8);
@@ -14660,11 +14651,13 @@ void Unit::SetSpeed(UnitMoveType mtype, float rate, bool forced)
                 return;
         }
         data << GetPackGUID();
-        data << (uint32)0;                                  // moveEvent, NUM_PMOVE_EVTS = 0x39
+        data << (IsPlayer() ? ToPlayer()->GetSession()->GetOrderCounter() : uint32(0)); // movement counter
         if (mtype == MOVE_RUN)
             data << uint8(0);                               // new 2.1.0
         data << float(GetSpeed(mtype));
         SendMessageToSet(&data, true);
+        if (IsPlayer()) // TODO: Resolve this mess
+            ToPlayer()->GetSession()->IncrementOrderCounter();
     }
 }
 
@@ -16821,6 +16814,15 @@ bool Unit::IsStandState() const
 {
     uint8 s = getStandState();
     return !IsSitState() && s != UNIT_STAND_STATE_SLEEP && s != UNIT_STAND_STATE_KNEEL;
+}
+
+bool Unit::IsStandUpOnMovementState() const
+{
+    uint8 s = getStandState();
+    return
+        s == UNIT_STAND_STATE_SIT_CHAIR || s == UNIT_STAND_STATE_SIT_LOW_CHAIR ||
+        s == UNIT_STAND_STATE_SIT_MEDIUM_CHAIR || s == UNIT_STAND_STATE_SIT_HIGH_CHAIR ||
+        s == UNIT_STAND_STATE_SIT || s == UNIT_STAND_STATE_SLEEP;
 }
 
 void Unit::SetStandState(uint8 state)
@@ -21233,6 +21235,61 @@ std::string Unit::GetDebugInfo() const
         << " UnitMovementFlags: " << GetUnitMovementFlags() << " ExtraUnitMovementFlags: " << GetExtraUnitMovementFlags()
         << " Class: " << std::to_string(getClass());
     return sstr.str();
+}
+
+bool Unit::IsClientControlled(Player const* exactClient /*= nullptr*/) const
+{
+    // Severvide method to check if unit is client controlled (optionally check for specific client in control)
+
+    // Applies only to player controlled units
+    if (!HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED))
+        return false;
+
+    // These flags are meant to be used when server controls this unit, client control is taken away
+    if (HasFlag(UNIT_FIELD_FLAGS, (UNIT_FLAG_DISABLE_MOVE | UNIT_FLAG_CONFUSED | UNIT_FLAG_FLEEING)))
+        return false;
+
+    // If unit is possessed, it has lost original control...
+    if (ObjectGuid const& guid = GetCharmerGUID())
+    {
+        // ... but if it is a possessing charm, then we have to check if some other player controls it
+        if (HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_POSSESSED) && guid.IsPlayer())
+            return (exactClient ? (exactClient->GetGUID() == guid) : true);
+        return false;
+    }
+
+    // By default: players have client control over themselves
+    if (IsPlayer())
+        return (exactClient ? (exactClient == this) : true);
+    return false;
+}
+
+Player const* Unit::GetClientControlling() const
+{
+    // Serverside reverse "mover" deduction logic at controlled unit
+
+    // Applies only to player controlled units
+    if (HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED))
+    {
+        // Charm always removes control from original client...
+        if (GetCharmerGUID())
+        {
+            // ... but if it is a possessing charm, some other client may have control
+            if (HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_POSSESSED))
+            {
+                Unit const* charmer = GetCharmer();
+                if (charmer && charmer->IsPlayer())
+                    return static_cast<Player const*>(charmer);
+            }
+        }
+        else if (IsPlayer())
+        {
+            // Check if anything prevents original client from controlling
+            if (IsClientControlled(static_cast<Player const*>(this)))
+                return static_cast<Player const*>(this);
+        }
+    }
+    return nullptr;
 }
 
 void Unit::SetCannotReachTargetUnit(bool cannotReach, bool isChase)

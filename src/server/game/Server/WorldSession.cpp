@@ -137,6 +137,7 @@ WorldSession::WorldSession(uint32 id, std::string&& name, uint32 accountFlags, s
     _timeSyncClockDeltaQueue(6),
     _timeSyncClockDelta(0),
     _pendingTimeSyncRequests(),
+    _orderCounter(0),
     _isBot(isBot)
 {
     memset(m_Tutorials, 0, sizeof(m_Tutorials));
