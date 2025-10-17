@@ -137,6 +137,7 @@ WorldSession::WorldSession(uint32 id, std::string&& name, uint32 accountFlags, s
     _timeSyncClockDeltaQueue(6),
     _timeSyncClockDelta(0),
     _pendingTimeSyncRequests(),
+    _orderCounter(0),
     _isBot(isBot)
 {
     memset(m_Tutorials, 0, sizeof(m_Tutorials));
@@ -785,8 +786,6 @@ void WorldSession::LogoutPlayer(bool save)
         LOG_INFO("entities.player", "Account: {} (IP: {}) Logout Character:[{}] ({}) Level: {}",
             GetAccountId(), GetRemoteAddress(), _player->GetName(), _player->GetGUID().ToString(), _player->GetLevel());
 
-        uint32 statementIndex = CHAR_UPD_ACCOUNT_ONLINE;
-        uint32 statementParam = GetAccountId();
         sScriptMgr->OnDatabaseSelectIndexLogout(_player, statementIndex, statementParam);
 
         //! Remove the player from the world
@@ -808,8 +807,8 @@ void WorldSession::LogoutPlayer(bool save)
         LOG_DEBUG("network", "SESSION: Sent SMSG_LOGOUT_COMPLETE Message");
 
         //! Since each account can only have one online character at any given time, ensure all characters for active account are marked as offline
-        CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CharacterDatabaseStatements(statementIndex));
-        stmt->SetData(0, statementParam);
+        CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPD_ACCOUNT_ONLINE);
+        stmt->SetData(0, GetAccountId());
         CharacterDatabase.Execute(stmt);
     }
 
@@ -1541,6 +1540,12 @@ void WorldSession::InitializeSessionCallback(CharacterDatabaseQueryHolder const&
     SendAddonsInfo();
     SendClientCacheVersion(clientCacheVersion);
     SendTutorialsData();
+}
+
+void WorldSession::SetPacketLogging(bool state)
+{
+    if (m_Socket)
+        m_Socket->SetPacketLogging(state);
 }
 
 LockedQueue<WorldPacket*>& WorldSession::GetPacketQueue()
