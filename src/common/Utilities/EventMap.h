@@ -80,6 +80,20 @@ public:
     }
 
     /**
+    * Was removed in core https://github.com/azerothcore/azerothcore-wotlk/pull/23121,
+    * but still required atm for playerbot and RaidNaxxBossHelper. Modified version of
+    * the original.
+    * 
+    * @name GetTimer
+    * @return Current timer value.
+    */
+    [[nodiscard]] uint32 GetTimer() const
+    {
+        auto elapsed = _time.time_since_epoch();
+        return elapsed.count() > UINT32_MAX ? UINT32_MAX : static_cast<uint32>(elapsed.count());
+    }
+
+    /**
     * @name GetPhaseMask
     * @return Active phases as mask.
     */
