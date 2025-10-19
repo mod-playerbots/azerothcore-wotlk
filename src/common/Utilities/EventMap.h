@@ -94,6 +94,33 @@ public:
     }
 
     /**
+    * Was removed in core https://github.com/azerothcore/azerothcore-wotlk/pull/23121,
+    * but still required atm for playerbot and RaidNaxxBossHelper. Modified version of
+    * the original. Returns the absolute scheduled time
+    *
+    * @name GetNextEventTime
+    * @brief Returns closest occurence of specified event.
+    * @param eventId Wanted event id.
+    * @return Time of found event.
+    */
+    [[nodiscard]] uint32 GetNextEventTime(EventId eventId) const
+    {
+        if (_eventMap.empty()) return 0;
+
+        for (auto const& [time, event] : _eventMap)
+        {
+            if (eventId == event._id)
+            {
+                // convert TimePoint to uint32 milliseconds since epoch
+                auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(time.time_since_epoch()).count();
+                return static_cast<uint32>(ms);
+            }
+        }
+
+        return 0;
+    }
+
+    /**
     * @name GetPhaseMask
     * @return Active phases as mask.
     */
