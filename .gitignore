@@ -2,6 +2,7 @@
 # AzerothCore
 #
 
+
 /conf/*
 !/conf/dist
 /modules/*
