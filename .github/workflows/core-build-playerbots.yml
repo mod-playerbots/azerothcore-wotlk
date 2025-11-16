@@ -11,7 +11,7 @@ on:
     inputs:
       playerbot_branch:
         description: "Which branch of mod-playerbots should be used?"
-        required: false
+        required: true
         default: "master"
 
 jobs:
