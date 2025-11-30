@@ -3243,7 +3243,6 @@ void SpellMgr::LoadSpellInfoCustomAttributes()
             case 43268: // Saber Lash
             case 42384: // Brutal Swipe
             case 45150: // Meteor Slash
-            case 64688: // Sonic Screech
             case 72373: // Shared Suffering
             case 71904: // Chaos Bane
             case 70492: // Ooze Eruption
@@ -3311,6 +3310,7 @@ void SpellMgr::LoadSpellInfoCustomAttributes()
                 spellInfo->AttributesCu |= SPELL_ATTR0_CU_IGNORE_ARMOR;
                 break;
             case 64422: // Sonic Screech (Auriaya)
+            case 64688:
                 spellInfo->AttributesCu |= SPELL_ATTR0_CU_SHARE_DAMAGE;
                 spellInfo->AttributesCu |= SPELL_ATTR0_CU_IGNORE_ARMOR;
                 break;
@@ -3420,6 +3420,60 @@ void SpellMgr::LoadSpellInfoCustomAttributes()
                 break;
             case 45537: // Cosmetic - Lightning Beam Channel
                 spellInfo->AttributesCu |= SPELL_ATTR0_CU_IGNORE_EVADE;
+                break;
+            case 55821: // （NAXX小怪10人强力践踏）
+            case 55826: // （NAXX小怪25人强力践踏）
+            case 28783: // （NAXX阿努布雷坎10人穿刺）
+            case 56090: // （NAXX阿努布雷坎25人穿刺）
+            case 54703: // （NAXX小怪10人撕裂）
+            case 54708: // （NAXX小怪25人撕裂）
+            case 55543: // （NAXX教官10人怒吼）
+            case 29107: // （NAXX教官25人怒吼）
+            case 64697: //  (小怪uld地震)
+            case 64825: //  (10小怪uld咆哮)
+            case 64944: //  (25小怪uld咆哮)
+            case 64375: //  (10奥蕾莉亚豹子撕裂)
+            case 64667: //  (25奥蕾莉亚豹子撕裂)
+            case 62437: //  (10芙蕾雅地面震颤)
+            case 62859: //  (10芙蕾雅地面震颤)
+            case 67648://(戈莫克践踏）
+            case 66330://(戈莫克践踏）
+            case 67647://(戈莫克践踏）
+            case 67649://(戈莫克践踏）
+            case 67345://(冰喉旋风）
+            case 67663://(冰喉旋风）
+            case 67664://(冰喉旋风）
+            case 67665://(冰喉旋风）
+            case 66683://(冰喉击飞）
+            case 67660://(冰喉击飞）
+            case 67661://(冰喉击飞）
+            case 67662://(冰喉击飞）
+            case 70961://(ICC小怪爆炸)
+            case 71114://(ICC小怪践踏)
+            case 71115://(ICC小怪践踏)
+            case 69075://(骸骨风暴)
+            case 70834://(骸骨风暴)
+            case 70835://(骸骨风暴)
+            case 70836://(骸骨风暴)
+            case 71257://(小怪流血)
+            case 71154://(小怪流血)
+            case 70435://(小怪流血)
+            case 72385://(icc 萨鲁法尔血沸）
+            case 72441://(icc 萨鲁法尔血沸）
+            case 72442://(icc 萨鲁法尔血沸）
+            case 72443://(icc 萨鲁法尔血沸）
+            case 60919://冬握湖副本小怪 岩石雨
+            case 60923://冬握湖副本小怪 岩石雨
+            case 71337://ICC10 辛德拉苟莎小怪击飞
+            case 71338://ICC25 辛德拉苟莎小怪击飞
+                spellInfo->AttributesCu |= SPELL_ATTR0_CU_IGNORE_ARMOR;
+                break;
+            case 66331: //  (10戈莫克穿刺)
+            case 67477: //  (25戈莫克穿刺)
+            case 67478: //  (10H戈莫克穿刺)
+            case 67479: //  (25H戈莫克穿刺)
+                spellInfo->AttributesCu |= SPELL_ATTR0_CU_IGNORE_ARMOR;
+                spellInfo->Effects[EFFECT_0].BasePoints = 52;
                 break;
         }
 
