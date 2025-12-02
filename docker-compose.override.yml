@@ -1,4 +1,38 @@
+# docker-compose.override.yml for AzerothCore.
+#
+# Start the server with `docker compose up -d --build`
+
 services:
+  ac-database:
+    container_name: ac-database
+    image: mysql:8.4
+    networks:
+      - ac-network
+    ports:
+      - ${DOCKER_DB_EXTERNAL_PORT:-3306}:3306
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DOCKER_DB_ROOT_PASSWORD:-password}
+    volumes:
+      - type: volume
+        source: ac-database
+        target: /var/lib/mysql
+    restart: unless-stopped
+    healthcheck:
+      test: "/usr/bin/mysql --user=root --password=$$MYSQL_ROOT_PASSWORD --execute \"SHOW DATABASES;\""
+      interval: 5s
+      timeout: 10s
+      retries: 40
+
   ac-worldserver:
+    privileged: true
+    ports:
+      - ${DOCKER_WORLD_EXTERNAL_PORT:-8585}:8585
+      - ${DOCKER_SOAP_EXTERNAL_PORT:-8787}:8787
     volumes:
       - ./modules:/azerothcore/modules:ro
+
+  ac-dev-server:
+    ports:
+      - ${DOCKER_AUTH_EXTERNAL_PORT:-3724}:3724
+      - ${DOCKER_WORLD_EXTERNAL_PORT:-8585}:8585
+      - ${DOCKER_SOAP_EXTERNAL_PORT:-8787}:8787
