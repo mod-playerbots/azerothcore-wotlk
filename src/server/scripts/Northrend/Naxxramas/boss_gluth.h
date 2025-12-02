@@ -13,10 +13,8 @@ namespace Gluth {
 enum Spells
 {
     SPELL_MORTAL_WOUND                  = 25646,
-    SPELL_ENRAGE_10                     = 28371,
-    SPELL_ENRAGE_25                     = 54427,
-    SPELL_DECIMATE_10                   = 28374,
-    SPELL_DECIMATE_25                   = 54426,
+    SPELL_ENRAGE                        = 28371,
+    SPELL_DECIMATE                      = 28374,
     SPELL_DECIMATE_DAMAGE               = 28375,
     SPELL_BERSERK                       = 26662,
     SPELL_INFECTED_WOUND                = 29306,
@@ -103,7 +101,7 @@ public:
             me->SetInCombatWithZone();
             events.ScheduleEvent(EVENT_MORTAL_WOUND, 10s);
             events.ScheduleEvent(EVENT_ENRAGE, 22s);
-            events.ScheduleEvent(EVENT_DECIMATE, RAID_MODE(110000, 90000));
+            events.ScheduleEvent(EVENT_DECIMATE, RAID_MODE(110s, 90s));
             events.ScheduleEvent(EVENT_BERSERK, 6min);
             events.ScheduleEvent(EVENT_SUMMON_ZOMBIE, 10s);
             events.ScheduleEvent(EVENT_CAN_EAT_ZOMBIE, 1s);
@@ -172,7 +170,7 @@ public:
                     break;
                 case EVENT_ENRAGE:
                     Talk(EMOTE_ENRAGE);
-                    me->CastSpell(me, RAID_MODE(SPELL_ENRAGE_10, SPELL_ENRAGE_25), true);
+                    me->CastSpell(me, SPELL_ENRAGE, true);
                     events.Repeat(22s);
                     break;
                 case EVENT_MORTAL_WOUND:
@@ -181,8 +179,8 @@ public:
                     break;
                 case EVENT_DECIMATE:
                     Talk(EMOTE_DECIMATE);
-                    me->CastSpell(me, RAID_MODE(SPELL_DECIMATE_10, SPELL_DECIMATE_25), false);
-                    events.RepeatEvent(RAID_MODE(110000, 90000));
+                    me->CastSpell(me, SPELL_DECIMATE, false);
+                    events.Repeat(RAID_MODE(110s, 90s));
                     break;
                 case EVENT_SUMMON_ZOMBIE:
                     {
@@ -206,7 +204,7 @@ public:
                         break;
                     }
                 case EVENT_CAN_EAT_ZOMBIE:
-                    events.RepeatEvent(1000);
+                    events.Repeat(1s);
                     if (me->GetVictim()->GetEntry() == NPC_ZOMBIE_CHOW && me->IsWithinMeleeRange(me->GetVictim()))
                     {
                         me->CastCustomSpell(SPELL_CHOW_SEARCHER, SPELLVALUE_RADIUS_MOD, 20000, me, true);

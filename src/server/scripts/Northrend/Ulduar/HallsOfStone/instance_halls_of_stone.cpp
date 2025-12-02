@@ -20,6 +20,18 @@
 #include "ScriptedCreature.h"
 #include "halls_of_stone.h"
 
+ObjectData const summonData[] =
+{
+    { NPC_IRON_SLUDGE, BOSS_SJONNIR },
+    { 0,               0            }
+};
+
+ObjectData const creatureData[] =
+{
+    { NPC_SJONNIR,     BOSS_SJONNIR },
+    { 0,               0            }
+};
+
 class instance_halls_of_stone : public InstanceMapScript
 {
 public:
@@ -45,7 +57,6 @@ public:
         ObjectGuid goSjonnirDoorGUID;
         ObjectGuid goLeftPipeGUID;
         ObjectGuid goRightPipeGUID;
-        ObjectGuid goTribunalDoorGUID;
 
         ObjectGuid SjonnirGUID;
         ObjectGuid BrannGUID;
@@ -58,6 +69,9 @@ public:
         void Initialize() override
         {
             SetHeaders(DataHeader);
+            SetBossNumber(MAX_ENCOUNTER);
+            LoadObjectData(creatureData, nullptr);
+            LoadSummonData(summonData);
             memset(&Encounter, 0, sizeof(Encounter));
 
             brannAchievement = false;
@@ -96,10 +110,6 @@ public:
                 case GO_TRIBUNAL_CONSOLE:
                     goTribunalConsoleGUID = go->GetGUID();
                     break;
-                case GO_TRIBUNAL_ACCESS_DOOR:
-                    goTribunalDoorGUID = go->GetGUID();
-                    go->SetGoState(GO_STATE_READY);
-                    break;
                 case GO_SKY_FLOOR:
                     goSkyRoomFloorGUID = go->GetGUID();
                     if (Encounter[BOSS_TRIBUNAL_OF_AGES] == DONE)
@@ -126,13 +136,12 @@ public:
         {
             switch (creature->GetEntry())
             {
-                case NPC_SJONNIR:
-                    SjonnirGUID = creature->GetGUID();
-                    break;
                 case NPC_BRANN:
                     BrannGUID = creature->GetGUID();
                     break;
             }
+
+            InstanceScript::OnCreatureCreate(creature);
         }
 
         ObjectGuid GetGuidData(uint32 id) const override
@@ -141,8 +150,6 @@ public:
             {
                 case GO_TRIBUNAL_CONSOLE:
                     return goTribunalConsoleGUID;
-                case GO_TRIBUNAL_ACCESS_DOOR:
-                    return goTribunalDoorGUID;
                 case GO_SJONNIR_CONSOLE:
                     return goSjonnirConsoleGUID;
                 case GO_SJONNIR_DOOR:
@@ -207,10 +214,6 @@ public:
                 isMaidenOfGriefDead = type == BOSS_MAIDEN_OF_GRIEF || isMaidenOfGriefDead;
                 isKrystalusDead = type == BOSS_KRYSTALLUS || isKrystalusDead;
             }
-
-            if (isMaidenOfGriefDead && isKrystalusDead)
-                if (GameObject* tribunalDoor = instance->GetGameObject(goTribunalDoorGUID))
-                    tribunalDoor->SetGoState(GO_STATE_ACTIVE);
 
             if (type == BOSS_TRIBUNAL_OF_AGES && data == SPECIAL)
             {

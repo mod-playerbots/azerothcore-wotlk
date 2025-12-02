@@ -102,7 +102,7 @@ public:
 
         void KilledUnit(Unit*  /*victim*/) override
         {
-            if (events.GetNextEventTime(EVENT_KILL_TALK) == 0)
+            if (!events.HasTimeUntilEvent(EVENT_KILL_TALK))
             {
                 Talk(SAY_KILL);
                 events.ScheduleEvent(EVENT_KILL_TALK, 6s);
@@ -129,6 +129,12 @@ public:
 
             if (!UpdateVictim())
                 return;
+
+            if (!CheckInRoom())
+            {
+                EnterEvadeMode(EVADE_REASON_BOUNDARY);
+                return;
+            }
 
             events.Update(diff);
             if (me->HasUnitState(UNIT_STATE_CASTING))
@@ -159,9 +165,9 @@ public:
             DoMeleeAttackIfReady();
         }
 
-        bool CheckEvadeIfOutOfCombatArea() const override
+        bool CheckInRoom() override
         {
-            return me->GetHomePosition().GetExactDist2d(me) > 60.0f;
+            return (me->GetPositionY() >= -700.0f && me->GetPositionY() <= -628.0f);
         }
 
     private:
@@ -214,7 +220,7 @@ class spell_trollgore_corpse_explode_aura : public AuraScript
     void HandleRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
     {
         if (Creature* target = GetTarget()->ToCreature())
-            target->DespawnOrUnsummon(1);
+            target->DespawnOrUnsummon(1ms);
     }
 
     void Register() override

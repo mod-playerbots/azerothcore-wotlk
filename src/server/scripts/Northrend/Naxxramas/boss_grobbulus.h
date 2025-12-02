@@ -17,10 +17,8 @@ enum Spells
     SPELL_POISON_CLOUD                      = 28240,
     SPELL_MUTATING_INJECTION                = 28169,
     SPELL_MUTATING_EXPLOSION                = 28206,
-    SPELL_SLIME_SPRAY_10                    = 28157,
-    SPELL_SLIME_SPRAY_25                    = 54364,
-    SPELL_POISON_CLOUD_DAMAGE_AURA_10       = 28158,
-    SPELL_POISON_CLOUD_DAMAGE_AURA_25       = 54362,
+    SPELL_SLIME_SPRAY                       = 28157,
+    SPELL_POISON_CLOUD_DAMAGE_AURA          = 28158,
     SPELL_BERSERK                           = 26662,
     SPELL_BOMBARD_SLIME                     = 28280
 };
@@ -90,15 +88,7 @@ public:
             events.ScheduleEvent(EVENT_POISON_CLOUD, 15s);
             events.ScheduleEvent(EVENT_MUTATING_INJECTION, 20s);
             events.ScheduleEvent(EVENT_SLIME_SPRAY, 10s);
-            events.ScheduleEvent(EVENT_BERSERK, RAID_MODE(720000, 540000));
-        }
-
-        void SpellHitTarget(Unit* target, SpellInfo const* spellInfo) override
-        {
-            if (spellInfo->Id == RAID_MODE(SPELL_SLIME_SPRAY_10, SPELL_SLIME_SPRAY_25) && target->IsPlayer())
-            {
-                me->SummonCreature(NPC_FALLOUT_SLIME, target->GetPositionX(), target->GetPositionY(), target->GetPositionZ());
-            }
+            events.ScheduleEvent(EVENT_BERSERK, RAID_MODE(720s, 540s));
         }
 
         void JustSummoned(Creature* cr) override
@@ -157,7 +147,7 @@ public:
                     break;
                 case EVENT_SLIME_SPRAY:
                     Talk(EMOTE_SLIME);
-                    me->CastSpell(me->GetVictim(), RAID_MODE(SPELL_SLIME_SPRAY_10, SPELL_SLIME_SPRAY_25), false);
+                    me->CastSpell(me->GetVictim(), SPELL_SLIME_SPRAY, false);
                     events.Repeat(20s);
                     break;
                 case EVENT_MUTATING_INJECTION:
@@ -165,7 +155,7 @@ public:
                     {
                         me->CastSpell(target, SPELL_MUTATING_INJECTION, false);
                     }
-                    events.RepeatEvent(6000 + uint32(120 * me->GetHealthPct()));
+                    events.Repeat(Milliseconds(6000 + uint32(120 * me->GetHealthPct())));
                     break;
             }
             DoMeleeAttackIfReady();
@@ -211,7 +201,7 @@ public:
                 auraVisualTimer += diff;
                 if (auraVisualTimer >= 1000)
                 {
-                    me->CastSpell(me, (me->GetMap()->Is25ManRaid() ? SPELL_POISON_CLOUD_DAMAGE_AURA_25 : SPELL_POISON_CLOUD_DAMAGE_AURA_10), true);
+                    me->CastSpell(me, SPELL_POISON_CLOUD_DAMAGE_AURA, true);
                     auraVisualTimer = 0;
                 }
             }
@@ -278,6 +268,23 @@ class spell_grobbulus_mutating_injection_aura : public AuraScript
         AfterEffectRemove += AuraEffectRemoveFn(spell_grobbulus_mutating_injection_aura::HandleRemove, EFFECT_0, SPELL_AURA_DUMMY, AURA_EFFECT_HANDLE_REAL);
     }
 };
+
+class spell_grobbulus_slime_spray : public SpellScript
+{
+    PrepareSpellScript(spell_grobbulus_slime_spray);
+
+    void HandleHit()
+    {
+        if (Unit* target = GetHitUnit())
+            GetCaster()->SummonCreature(NPC_FALLOUT_SLIME, target->GetPositionX(), target->GetPositionY(), target->GetPositionZ());
+    }
+
+    void Register() override
+    {
+        OnHit += SpellHitFn(spell_grobbulus_slime_spray::HandleHit);
+    }
+};
+
 
 }
 
