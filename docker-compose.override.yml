@@ -32,8 +32,8 @@ services:
       AC_AI_PLAYERBOT_ENABLED: 1
       AC_AI_PLAYERBOT_ENABLE_BROADCASTS: 0
       AC_OLLAMA_CHAT_DEBUG_ENABLED: 1
-      AC_OLLAMA_CHAT_MODEL: llama3.1:latest # Modify if needed
-      AC_OLLAMA_CHAT_URL: http://testing-ac-ollamaserver:11434/api/generate
+      AC_OLLAMA_CHAT_MODEL: llama3.2:3b
+      AC_OLLAMA_CHAT_URL: http://macmini.rollet.family:11434/api/generate
     ports:
       - ${DOCKER_WORLD_EXTERNAL_PORT:-8585}:8585
       - ${DOCKER_SOAP_EXTERNAL_PORT:-8787}:8787
@@ -41,11 +41,21 @@ services:
       - ac-network
     volumes:
       - ./modules:/azerothcore/modules:ro
+    depends_on:
+      ac-database:
+        condition: service_healthy
+      ac-client-data-init:
+        condition: service_completed_successfully
 
   ac-authserver:
     container_name: testing-ac-authserver
     environment:
       AC_LOGIN_DATABASE_INFO: "192.168.144.7;3306;root;${DOCKER_DB_ROOT_PASSWORD:-password};acore_auth"
+    depends_on:
+      ac-database:
+        condition: service_healthy
+      ac-client-data-init:
+        condition: service_completed_successfully
 
   ac-client-data-init:
     container_name: testing-ac-client-data-init
@@ -59,16 +69,17 @@ services:
       - ${DOCKER_WORLD_EXTERNAL_PORT:-8585}:8585
       - ${DOCKER_SOAP_EXTERNAL_PORT:-8787}:8787
 
-  ac-ollamaserver:
-    container_name: testing-ac-ollamaserver
-    image: ollama/ollama
-    volumes:
-      - ollama:/root/.ollama
-    ports:
-      - "11434:11434"
-    networks:
-      - ac-network
-    restart: unless-stopped
+  # Commented out local Ollama container - now using Mac Mini
+  # ac-ollamaserver:
+  #   container_name: testing-ac-ollamaserver
+  #   image: ollama/ollama
+  #   volumes:
+  #     - ollama:/root/.ollama
+  #   ports:
+  #     - "11434:11434"
+  #   networks:
+  #     - ac-network
+  #   restart: unless-stopped
 
 volumes:
   ollama:

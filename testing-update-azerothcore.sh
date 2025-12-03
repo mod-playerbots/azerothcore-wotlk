@@ -12,7 +12,7 @@
 #
 # Author: OpenCode AI Assistant
 # Date: 2025-12-03
-# Version: 1.0.1 (Testing-Playerbot)
+# Version: 1.1.0 (Testing-Playerbot - with auto module cloning)
 ################################################################################
 
 set -euo pipefail # Exit on error, undefined vars, pipe failures
@@ -83,6 +83,16 @@ log_header() {
 # UTILITY FUNCTIONS
 ################################################################################
 
+convert_ssh_to_https() {
+  local url="$1"
+  # Convert git@github.com:user/repo.git to https://github.com/user/repo.git
+  if [[ "$url" =~ ^git@github\.com:(.*)$ ]]; then
+    echo "https://github.com/${BASH_REMATCH[1]}"
+  else
+    echo "$url"
+  fi
+}
+
 get_duration() {
   local end_time=$(date +%s)
   local duration=$((end_time - START_TIME))
@@ -94,8 +104,8 @@ get_duration() {
 cleanup_old_logs() {
   log_info "Cleaning up logs older than 90 days..."
   find "${LOGS_DIR}" -name "*.log" -type f -mtime +90 -delete 2>/dev/null || true
-  local deleted_count=$(find "${LOGS_DIR}" -name "*.log" -type f -mtime +90 | wc -l)
-  log_info "Cleaned up old logs (found ${deleted_count} files to delete)"
+  local deleted_count=$(find "${LOGS_DIR}" -name "*.log" -type f -mtime +90 2>/dev/null | wc -l)
+  log_info "Cleaned up old logs (${deleted_count} files checked)"
 }
 
 show_help() {
@@ -172,7 +182,7 @@ validate_environment() {
   # Check for local changes (excluding submodule pointer updates)
   log_info "Checking for local changes..."
   # Get status excluding submodule changes (modules/* directory)
-  LOCAL_CHANGES=$(git status --porcelain | grep -v "^.[M] modules/")
+  LOCAL_CHANGES=$(git status --porcelain | grep -v "^.[M] modules/" || true)
   if [[ -n "$LOCAL_CHANGES" ]]; then
     log_error "Local changes detected. Commit or stash changes before updating."
     log_error "Changed files:"
@@ -182,7 +192,7 @@ validate_environment() {
     exit 1
   fi
   # Log submodule changes if any (informational only)
-  SUBMODULE_CHANGES=$(git status --porcelain | grep "^.[M] modules/")
+  SUBMODULE_CHANGES=$(git status --porcelain | grep "^.[M] modules/" || true)
   if [[ -n "$SUBMODULE_CHANGES" ]]; then
     log_info "Submodule pointer updates detected (normal, will be updated):"
     echo "$SUBMODULE_CHANGES" | while read line; do
@@ -223,7 +233,7 @@ capture_versions() {
   for module in mod-*; do
     if [[ -d "${module}/.git" ]]; then
       cd "${module}" || continue
-      local module_version=$(git rev-parse --short HEAD)
+      local module_version=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
       if [[ "${prefix}" == "before" ]]; then
         BEFORE_VERSIONS["${module}"]=${module_version}
       else
@@ -275,6 +285,140 @@ generate_change_report() {
 }
 
 ################################################################################
+# MODULE MANAGEMENT FUNCTIONS
+################################################################################
+
+clone_missing_modules() {
+  log_header "Checking for Missing Modules"
+
+  if [[ "${DRY_RUN}" == "true" ]]; then
+    log_info "[DRY RUN] Would check and clone missing modules"
+    return 0
+  fi
+
+  # Check if .gitmodules exists
+  if [[ ! -f "${SCRIPT_DIR}/.gitmodules" ]]; then
+    log_warning "No .gitmodules file found - skipping module checks"
+    return 0
+  fi
+
+  local cloned_count=0
+  local skipped_count=0
+
+  # Parse .gitmodules and clone missing modules
+  local current_path=""
+  local current_url=""
+  local current_branch=""
+
+  while IFS= read -r line; do
+    # Extract submodule path
+    if [[ "$line" =~ path[[:space:]]*=[[:space:]]*(.*) ]]; then
+      current_path="${BASH_REMATCH[1]}"
+      current_path="${current_path//\"/}" # Remove quotes
+    fi
+
+    # Extract submodule URL
+    if [[ "$line" =~ url[[:space:]]*=[[:space:]]*(.*) ]]; then
+      current_url="${BASH_REMATCH[1]}"
+      current_url="${current_url//\"/}" # Remove quotes
+      # Convert SSH to HTTPS if needed
+      current_url=$(convert_ssh_to_https "$current_url")
+    fi
+
+    # Extract branch
+    if [[ "$line" =~ branch[[:space:]]*=[[:space:]]*(.*) ]]; then
+      current_branch="${BASH_REMATCH[1]}"
+      current_branch="${current_branch//\"/}" # Remove quotes
+    fi
+
+    # When we have all three pieces, check if module exists
+    if [[ -n "$current_path" ]] && [[ -n "$current_url" ]] && [[ -n "$current_branch" ]]; then
+      local full_path="${SCRIPT_DIR}/${current_path}"
+
+      if [[ ! -d "${full_path}/.git" ]] && [[ ! -f "${full_path}/.git" ]]; then
+        log_info "Module missing: ${current_path}"
+        log_info "  URL: ${current_url}"
+        log_info "  Branch: ${current_branch}"
+
+        # Clone the module
+        log_info "  Cloning module..."
+        if git clone -b "${current_branch}" "${current_url}" "${full_path}" 2>&1 | tee -a "${LOG_FILE}"; then
+          log_success "  ✓ Cloned ${current_path}"
+          ((cloned_count++))
+        else
+          log_error "  ✗ Failed to clone ${current_path}"
+          log_warning "  Continuing with other modules..."
+        fi
+      else
+        ((skipped_count++))
+      fi
+
+      # Reset for next submodule
+      current_path=""
+      current_url=""
+      current_branch=""
+    fi
+  done <"${SCRIPT_DIR}/.gitmodules"
+
+  if [[ ${cloned_count} -gt 0 ]]; then
+    log_success "Cloned ${cloned_count} missing module(s)"
+  fi
+
+  if [[ ${skipped_count} -gt 0 ]]; then
+    log_info "${skipped_count} module(s) already exist"
+  fi
+
+  return 0
+}
+
+import_module_sql() {
+  log_header "Importing Module SQL Files"
+
+  if [[ "${DRY_RUN}" == "true" ]]; then
+    log_info "[DRY RUN] Would import SQL files for new modules"
+    return 0
+  fi
+
+  local imported_count=0
+
+  cd "${SCRIPT_DIR}/modules" || return 1
+
+  for module in mod-*; do
+    if [[ -d "${module}/data/sql/characters/base" ]]; then
+      log_info "Checking SQL files for ${module}..."
+
+      # Import SQL files
+      for sql_file in "${module}/data/sql/characters/base"/*.sql; do
+        if [[ -f "$sql_file" ]]; then
+          log_info "  Importing: $(basename "$sql_file")"
+          if docker exec -i testing-ac-database mysql -uroot -ppassword acore_characters <"$sql_file" 2>&1 | grep -v "password on the command line" | tee -a "${LOG_FILE}"; then
+            log_success "    ✓ Imported"
+            ((imported_count++))
+          else
+            # Check if error was just duplicate entry (already imported)
+            if [[ $? -eq 1 ]]; then
+              log_info "    (already imported or duplicate)"
+            else
+              log_warning "    Failed to import (may already exist)"
+            fi
+          fi
+        fi
+      done
+    fi
+  done
+
+  cd "${SCRIPT_DIR}" || return 1
+
+  if [[ ${imported_count} -gt 0 ]]; then
+    log_success "Imported ${imported_count} SQL file(s)"
+  else
+    log_info "No new SQL files to import"
+  fi
+
+  return 0
+}
+
+################################################################################
 # UPDATE FUNCTIONS
 ################################################################################
 
@@ -305,58 +449,52 @@ update_core() {
   return 0
 }
 
-update_submodules() {
-  log_header "Updating Submodules"
+update_modules() {
+  log_header "Updating Modules"
 
   if [[ "${DRY_RUN}" == "true" ]]; then
-    log_info "[DRY RUN] Would initialize and update all submodules"
+    log_info "[DRY RUN] Would update all modules"
     return 0
   fi
 
-  # Check if .gitmodules exists
-  if [[ ! -f "${SCRIPT_DIR}/.gitmodules" ]]; then
-    log_warning "No .gitmodules file found - skipping submodule updates"
-    return 0
-  fi
+  cd "${SCRIPT_DIR}/modules" || return 1
 
-  # Check for uninitialized submodules
-  log_info "Checking for uninitialized submodules..."
-  local uninitialized_count=0
+  local update_count=0
+  local error_count=0
 
-  # Get list of submodules from .gitmodules
-  while IFS= read -r line; do
-    if [[ "$line" =~ path[[:space:]]*=[[:space:]]*(.*) ]]; then
-      local submodule_path="${BASH_REMATCH[1]}"
-      # Check if submodule directory exists and is initialized
-      if [[ ! -d "${SCRIPT_DIR}/${submodule_path}/.git" ]] && [[ ! -f "${SCRIPT_DIR}/${submodule_path}/.git" ]]; then
-        log_info "Found uninitialized submodule: ${submodule_path}"
-        ((uninitialized_count++))
+  for module in mod-*; do
+    if [[ -d "${module}/.git" ]]; then
+      log_info "Updating ${module}..."
+      cd "${module}" || continue
+
+      # Get current branch
+      local current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "master")
+
+      # Fetch and pull updates
+      if git fetch origin "${current_branch}" 2>&1 | tee -a "${LOG_FILE}"; then
+        if git pull origin "${current_branch}" 2>&1 | tee -a "${LOG_FILE}"; then
+          log_success "  ✓ Updated ${module}"
+          ((update_count++))
+        else
+          log_error "  ✗ Failed to pull ${module}"
+          ((error_count++))
+        fi
+      else
+        log_error "  ✗ Failed to fetch ${module}"
+        ((error_count++))
       fi
-    fi
-  done <"${SCRIPT_DIR}/.gitmodules"
 
-  # Initialize submodules if any are missing
-  if [[ ${uninitialized_count} -gt 0 ]]; then
-    log_info "Initializing ${uninitialized_count} missing submodule(s)..."
-    if ! git submodule init 2>&1 | tee -a "${LOG_FILE}"; then
-      log_error "Failed to initialize submodules"
-      return 1
+      cd ..
     fi
-    log_success "Submodules initialized successfully"
-  else
-    log_info "All submodules are already initialized"
+  done
+
+  cd "${SCRIPT_DIR}" || return 1
+
+  log_info "Updated ${update_count} module(s)"
+  if [[ ${error_count} -gt 0 ]]; then
+    log_warning "${error_count} module(s) failed to update"
   fi
 
-  # Update all submodules to latest versions
-  log_info "Updating all submodules to latest versions..."
-  if ! git submodule update --init --remote --merge 2>&1 | tee -a "${LOG_FILE}"; then
-    log_error "Failed to update submodules"
-    log_error "Attempting rollback..."
-    git submodule foreach 'git reset --hard ORIG_HEAD' 2>&1 | tee -a "${LOG_FILE}"
-    return 1
-  fi
-
-  log_success "All submodules updated successfully"
   return 0
 }
 
@@ -436,6 +574,20 @@ main() {
     exit 1
   fi
 
+  # Clone any missing modules FIRST
+  if ! clone_missing_modules; then
+    log_error "Module cloning failed"
+    cleanup_old_logs
+    exit 1
+  fi
+
+  # Import SQL for new modules
+  if [[ "${GIT_ONLY}" == "false" ]] && [[ "${DRY_RUN}" == "false" ]]; then
+    if ! import_module_sql; then
+      log_warning "SQL import had some issues, continuing..."
+    fi
+  fi
+
   # Capture versions before update
   capture_versions "before"
 
@@ -446,9 +598,9 @@ main() {
     exit 1
   fi
 
-  # Update submodules
-  if ! update_submodules; then
-    log_error "Submodule update failed"
+  # Update modules
+  if ! update_modules; then
+    log_error "Module update failed"
     cleanup_old_logs
     exit 1
   fi
