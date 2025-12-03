@@ -228,16 +228,28 @@ validate_environment() {
     fi
     log_success "Network connectivity confirmed"
     
-    # Check for local changes
-    if [[ -n "$(git status --short)" ]]; then
-        log_error "Local changes detected. Please commit or stash before updating:"
-        git status --short | tee -a "${LOG_FILE}"
-        
-        local changes=$(git status --short | sed 's/^/  /')
-        send_uptimekuma_notification "down" "Update%20skipped%20-%20Local%20changes%20detected" ""
-        
-        return 1
+    # Check for local changes (excluding submodule pointer updates)
+    log_info "Checking for local changes..."
+    # Get status excluding submodule changes (modules/* directory)
+    LOCAL_CHANGES=$(git status --porcelain | grep -v "^.[M] modules/")
+    if [[ -n "$LOCAL_CHANGES" ]]; then
+    	log_error "Local changes detected. Commit or stash changes before updating."
+    	log_error "Changed files:"
+    	echo "$LOCAL_CHANGES" | while read line; do
+            log_error "  $line"
+   	done
+   	send_notification "down" "Local changes detected - update blocked"
+    	exit 1
     fi
+    # Log submodule changes if any (informational only)
+    SUBMODULE_CHANGES=$(git status --porcelain | grep "^.[M] modules/")
+    if [[ -n "$SUBMODULE_CHANGES" ]]; then
+    	log_info "Submodule pointer updates detected (normal, will be updated):"
+    	echo "$SUBMODULE_CHANGES" | while read line; do
+            log_info "  $line"
+    	done
+    fi
+
     log_success "No local changes detected"
     
     log_success "All pre-flight checks passed"
