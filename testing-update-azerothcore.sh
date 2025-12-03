@@ -309,12 +309,47 @@ update_submodules() {
   log_header "Updating Submodules"
 
   if [[ "${DRY_RUN}" == "true" ]]; then
-    log_info "[DRY RUN] Would update all submodules"
+    log_info "[DRY RUN] Would initialize and update all submodules"
     return 0
   fi
 
+  # Check if .gitmodules exists
+  if [[ ! -f "${SCRIPT_DIR}/.gitmodules" ]]; then
+    log_warning "No .gitmodules file found - skipping submodule updates"
+    return 0
+  fi
+
+  # Check for uninitialized submodules
+  log_info "Checking for uninitialized submodules..."
+  local uninitialized_count=0
+
+  # Get list of submodules from .gitmodules
+  while IFS= read -r line; do
+    if [[ "$line" =~ path[[:space:]]*=[[:space:]]*(.*) ]]; then
+      local submodule_path="${BASH_REMATCH[1]}"
+      # Check if submodule directory exists and is initialized
+      if [[ ! -d "${SCRIPT_DIR}/${submodule_path}/.git" ]] && [[ ! -f "${SCRIPT_DIR}/${submodule_path}/.git" ]]; then
+        log_info "Found uninitialized submodule: ${submodule_path}"
+        ((uninitialized_count++))
+      fi
+    fi
+  done <"${SCRIPT_DIR}/.gitmodules"
+
+  # Initialize submodules if any are missing
+  if [[ ${uninitialized_count} -gt 0 ]]; then
+    log_info "Initializing ${uninitialized_count} missing submodule(s)..."
+    if ! git submodule init 2>&1 | tee -a "${LOG_FILE}"; then
+      log_error "Failed to initialize submodules"
+      return 1
+    fi
+    log_success "Submodules initialized successfully"
+  else
+    log_info "All submodules are already initialized"
+  fi
+
+  # Update all submodules to latest versions
   log_info "Updating all submodules to latest versions..."
-  if ! git submodule update --remote --merge 2>&1 | tee -a "${LOG_FILE}"; then
+  if ! git submodule update --init --remote --merge 2>&1 | tee -a "${LOG_FILE}"; then
     log_error "Failed to update submodules"
     log_error "Attempting rollback..."
     git submodule foreach 'git reset --hard ORIG_HEAD' 2>&1 | tee -a "${LOG_FILE}"
