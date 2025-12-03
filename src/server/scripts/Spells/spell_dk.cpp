@@ -152,7 +152,7 @@ class spell_dk_raise_ally : public SpellScript
 
     SpellCastResult CheckCast()
     {
-        Player* unitTarget = GetHitPlayer();
+        Unit* unitTarget = GetExplTargetUnit();
         if (!unitTarget)
             return SPELL_FAILED_BAD_TARGETS;
 
@@ -345,7 +345,7 @@ class spell_dk_death_and_decay_aura : public AuraScript
         if (GetCaster() && GetTarget())
         {
             int32 basePoints0 = aurEff->GetAmount();
-            GetCaster()->CastCustomSpell(GetTarget(), SPELL_DK_DEATH_AND_DECAY_TRIGGER, &basePoints0, nullptr, nullptr, false, 0, aurEff);
+            GetCaster()->CastCustomSpell(GetTarget(), SPELL_DK_DEATH_AND_DECAY_TRIGGER, &basePoints0, nullptr, nullptr, true, 0, aurEff);
         }
     }
 

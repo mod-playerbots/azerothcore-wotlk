@@ -47,6 +47,7 @@ class InstanceScript;
 class Group;
 class InstanceSave;
 class Object;
+class Weather;
 class WorldObject;
 class TempSummon;
 class Player;
@@ -62,6 +63,7 @@ class Transport;
 class StaticTransport;
 class MotionTransport;
 class PathGenerator;
+class WorldSession;
 
 enum WeatherState : uint32;
 
@@ -132,6 +134,7 @@ struct ZoneDynamicInfo
     ZoneDynamicInfo();
 
     uint32 MusicId;
+    std::unique_ptr<Weather> DefaultWeather;
     WeatherState WeatherId;
     float WeatherGrade;
     uint32 OverrideLightId;
@@ -146,7 +149,9 @@ struct ZoneDynamicInfo
 
 typedef std::map<uint32/*leaderDBGUID*/, CreatureGroup*>        CreatureGroupHolderType;
 typedef std::unordered_map<uint32 /*zoneId*/, ZoneDynamicInfo> ZoneDynamicInfoMap;
-typedef std::set<MotionTransport*> TransportsContainer;
+typedef std::unordered_set<Transport*> TransportsContainer;
+typedef std::unordered_set<WorldObject*> ZoneWideVisibleWorldObjectsSet;
+typedef std::unordered_map<uint32 /*ZoneId*/, ZoneWideVisibleWorldObjectsSet> ZoneWideVisibleWorldObjectsMap;
 
 enum EncounterCreditType : uint8
 {
@@ -315,9 +320,6 @@ public:
     [[nodiscard]] bool HavePlayers() const { return !m_mapRefMgr.IsEmpty(); }
     [[nodiscard]] uint32 GetPlayersCountExceptGMs() const;
 
-    void AddWorldObject(WorldObject* obj) { i_worldObjects.insert(obj); }
-    void RemoveWorldObject(WorldObject* obj) { i_worldObjects.erase(obj); }
-
     void SendToPlayers(WorldPacket const* data) const;
 
     typedef MapRefMgr PlayerList;
@@ -326,14 +328,6 @@ public:
     //per-map script storage
     void ScriptsStart(std::map<uint32, std::multimap<uint32, ScriptInfo> > const& scripts, uint32 id, Object* source, Object* target);
     void ScriptCommandStart(ScriptInfo const& script, uint32 delay, Object* source, Object* target);
-
-    // must called with AddToWorld
-    template<class T>
-    void AddToActive(T* obj);
-
-    // must called with RemoveFromWorld
-    template<class T>
-    void RemoveFromActive(T* obj);
 
     CreatureGroupHolderType CreatureGroupHolder;
 
@@ -344,12 +338,12 @@ public:
     GameObject* SummonGameObject(uint32 entry, Position const& pos, float rotation0 = 0.0f, float rotation1 = 0.0f, float rotation2 = 0.0f, float rotation3 = 0.0f, uint32 respawnTime = 100, bool checkTransport = true);
     void SummonCreatureGroup(uint8 group, std::list<TempSummon*>* list = nullptr);
 
-    Corpse* GetCorpse(ObjectGuid const guid);
-    Creature* GetCreature(ObjectGuid const guid);
-    GameObject* GetGameObject(ObjectGuid const guid);
-    Transport* GetTransport(ObjectGuid const guid);
-    DynamicObject* GetDynamicObject(ObjectGuid const guid);
-    Pet* GetPet(ObjectGuid const guid);
+    Corpse* GetCorpse(ObjectGuid const& guid);
+    Creature* GetCreature(ObjectGuid const& guid);
+    GameObject* GetGameObject(ObjectGuid const& guid);
+    Transport* GetTransport(ObjectGuid const& guid);
+    DynamicObject* GetDynamicObject(ObjectGuid const& guid);
+    Pet* GetPet(ObjectGuid const& guid);
 
     MapStoredObjectTypesContainer& GetObjectsStore() { return _objectsStore; }
 
@@ -444,18 +438,27 @@ public:
     void DeleteCorpseData();
     void AddCorpse(Corpse* corpse);
     void RemoveCorpse(Corpse* corpse);
-    Corpse* ConvertCorpseToBones(ObjectGuid const ownerGuid, bool insignia = false);
+    Corpse* ConvertCorpseToBones(ObjectGuid const& ownerGuid, bool insignia = false);
     void RemoveOldCorpses();
 
     static void DeleteRespawnTimesInDB(uint16 mapId, uint32 instanceId);
 
+    bool SendZoneMessage(uint32 zone, WorldPacket const* packet, WorldSession const* self = nullptr, TeamId teamId = TEAM_NEUTRAL) const;
+    void SendZoneText(uint32 zoneId, char const* text, WorldSession const* self = nullptr, TeamId teamId = TEAM_NEUTRAL) const;
+
     void SendInitTransports(Player* player);
     void SendRemoveTransports(Player* player);
-    void SendZoneDynamicInfo(Player* player);
+    void SendZoneDynamicInfo(uint32 zoneId, Player* player) const;
+    void SendZoneWeather(uint32 zoneId, Player* player) const;
+    void SendZoneWeather(ZoneDynamicInfo const& zoneDynamicInfo, Player* player) const;
     void SendInitSelf(Player* player);
+
+    void UpdateWeather(uint32 const diff);
+    void UpdateExpiredCorpses(uint32 const diff);
 
     void PlayDirectSoundToMap(uint32 soundId, uint32 zoneId = 0);
     void SetZoneMusic(uint32 zoneId, uint32 musicId);
+    Weather* GetOrGenerateZoneDefaultWeather(uint32 zoneId);
     void SetZoneWeather(uint32 zoneId, WeatherState weatherId, float weatherGrade);
     void SetZoneOverrideLight(uint32 zoneId, uint32 lightId, Milliseconds fadeInTime);
 
@@ -490,10 +493,7 @@ public:
         _updateObjects.erase(obj);
     }
 
-    std::size_t GetActiveNonPlayersCount() const
-    {
-        return m_activeNonPlayers.size();
-    }
+    size_t GetUpdatableObjectsCount() const { return _updatableObjectList.size(); }
 
     virtual std::string GetDebugInfo() const;
 
@@ -507,6 +507,20 @@ public:
 
     typedef std::vector<WorldObject*> UpdatableObjectList;
     typedef std::unordered_set<WorldObject*> PendingAddUpdatableObjectList;
+
+    void AddWorldObjectToFarVisibleMap(WorldObject* obj);
+    void RemoveWorldObjectFromFarVisibleMap(WorldObject* obj);
+    void AddWorldObjectToZoneWideVisibleMap(uint32 zoneId, WorldObject* obj);
+    void RemoveWorldObjectFromZoneWideVisibleMap(uint32 zoneId, WorldObject* obj);
+    ZoneWideVisibleWorldObjectsSet const* GetZoneWideVisibleWorldObjectsForZone(uint32 zoneId) const;
+
+    [[nodiscard]] uint32 GetPlayerCountInZone(uint32 zoneId) const
+    {
+        if (auto const& it = _zonePlayerCountMap.find(zoneId); it != _zonePlayerCountMap.end())
+            return it->second;
+
+        return 0;
+    };
 
 private:
 
@@ -549,11 +563,6 @@ protected:
     MapRefMgr m_mapRefMgr;
     MapRefMgr::iterator m_mapRefIter;
 
-    typedef std::set<WorldObject*> ActiveNonPlayers;
-    ActiveNonPlayers m_activeNonPlayers;
-    ActiveNonPlayers::iterator m_activeNonPlayersIter;
-
-    // Objects that must update even in inactive grids without activating them
     TransportsContainer _transports;
     TransportsContainer::iterator _transportsUpdateIter;
 
@@ -575,34 +584,12 @@ private:
 
     bool i_scriptLock;
     std::unordered_set<WorldObject*> i_objectsToRemove;
-    std::unordered_set<WorldObject*> i_worldObjects;
 
     typedef std::multimap<time_t, ScriptAction> ScriptScheduleMap;
     ScriptScheduleMap m_scriptSchedule;
 
     template<class T>
     void DeleteFromWorld(T*);
-
-    void AddToActiveHelper(WorldObject* obj)
-    {
-        m_activeNonPlayers.insert(obj);
-    }
-
-    void RemoveFromActiveHelper(WorldObject* obj)
-    {
-        // Map::Update for active object in proccess
-        if (m_activeNonPlayersIter != m_activeNonPlayers.end())
-        {
-            ActiveNonPlayers::iterator itr = m_activeNonPlayers.find(obj);
-            if (itr == m_activeNonPlayers.end())
-                return;
-            if (itr == m_activeNonPlayersIter)
-                ++m_activeNonPlayersIter;
-            m_activeNonPlayers.erase(itr);
-        }
-        else
-            m_activeNonPlayers.erase(obj);
-    }
 
     void UpdateNonPlayerObjects(uint32 const diff);
 
@@ -615,7 +602,10 @@ private:
     std::unordered_map<uint32, uint32> _zonePlayerCountMap;
 
     ZoneDynamicInfoMap _zoneDynamicInfo;
+    IntervalTimer _weatherUpdateTimer;
     uint32 _defaultLight;
+
+    IntervalTimer _corpseUpdateTimer;
 
     template<HighGuid high>
     inline ObjectGuidGeneratorBase& GetGuidSequenceGenerator()
@@ -640,6 +630,7 @@ private:
     UpdatableObjectList _updatableObjectList;
     PendingAddUpdatableObjectList _pendingAddUpdatableObjectList;
     IntervalTimer _updatableObjectListRecheckTimer;
+    ZoneWideVisibleWorldObjectsMap _zoneWideVisibleWorldObjectsMap;
 };
 
 enum InstanceResetMethod

@@ -1854,7 +1854,7 @@ void Spell::EffectPersistentAA(SpellEffIndex effIndex)
         // Caster not in world, might be spell triggered from aura removal
         if (!caster->IsInWorld() || !caster->FindMap() || !ObjectAccessor::GetUnit(*caster, caster->GetGUID())) // pussywizard: temporary crash fix (FindMap and GetUnit are mine)
             return;
-        DynamicObject* dynObj = new DynamicObject(false);
+        DynamicObject* dynObj = new DynamicObject();
         if (!dynObj->CreateDynamicObject(caster->GetMap()->GenerateLowGuid<HighGuid::DynamicObject>(), caster, m_spellInfo->Id, *destTarget, radius, DYNAMIC_OBJECT_AREA_SPELL))
         {
             delete dynObj;
@@ -2429,8 +2429,14 @@ void Spell::EffectSummonType(SpellEffIndex effIndex)
                         }
                         break;
                     }
-                case SUMMON_TYPE_JEEVES:
                 case SUMMON_TYPE_MINIPET:
+                    // For companions, recalculate the position to ensure they spawn at the intended π/4 angle.
+                    destTarget->Relocate(m_originalCaster->GetNearPosition(
+                        m_originalCaster->GetDistance2d(destTarget->GetPositionX(), destTarget->GetPositionY()),
+                        MINI_PET_SUMMON_ANGLE
+                    ));
+                    [[fallthrough]];
+                case SUMMON_TYPE_JEEVES:
                     {
                         summon = m_caster->GetMap()->SummonCreature(entry, *destTarget, properties, duration, m_originalCaster, m_spellInfo->Id, 0, personalSpawn);
                         if (!summon || !summon->HasUnitTypeMask(UNIT_MASK_MINION))
@@ -2446,8 +2452,9 @@ void Spell::EffectSummonType(SpellEffIndex effIndex)
                         //summon->AI()->EnterEvadeMode();
                         if (properties->Type != SUMMON_TYPE_JEEVES)
                         {
+                            summon->SetFacingToObject(m_originalCaster);
                             summon->GetMotionMaster()->Clear(false);
-                            summon->GetMotionMaster()->MoveFollow(m_originalCaster, PET_FOLLOW_DIST, summon->GetFollowAngle(), MOTION_SLOT_ACTIVE);
+                            summon->GetMotionMaster()->MoveFollow(m_originalCaster, PET_FOLLOW_DIST, MINI_PET_FOLLOW_ANGLE, MOTION_SLOT_ACTIVE);
                         }
                         break;
                     }
@@ -2731,7 +2738,7 @@ void Spell::EffectAddFarsight(SpellEffIndex effIndex)
     // Remove old farsight if exist
     bool updateViewerVisibility = m_caster->RemoveDynObject(m_spellInfo->Id);
 
-    DynamicObject* dynObj = new DynamicObject(false);
+    DynamicObject* dynObj = new DynamicObject();
     if (!dynObj->CreateDynamicObject(m_caster->GetMap()->GenerateLowGuid<HighGuid::DynamicObject>(), m_caster, m_spellInfo->Id, *destTarget, radius, DYNAMIC_OBJECT_FARSIGHT_FOCUS))
     {
         delete dynObj;
@@ -4043,7 +4050,7 @@ void Spell::EffectSanctuary(SpellEffIndex /*effIndex*/)
     UnitList targets;
     Acore::AnyUnfriendlyUnitInObjectRangeCheck u_check(unitTarget, unitTarget, unitTarget->GetVisibilityRange()); // no VISIBILITY_COMPENSATION, distance is enough
     Acore::UnitListSearcher<Acore::AnyUnfriendlyUnitInObjectRangeCheck> searcher(unitTarget, targets, u_check);
-    Cell::VisitAllObjects(unitTarget, searcher, unitTarget->GetVisibilityRange());
+    Cell::VisitObjects(unitTarget, searcher, unitTarget->GetVisibilityRange());
     for (UnitList::iterator iter = targets.begin(); iter != targets.end(); ++iter)
     {
         if (!(*iter)->HasUnitState(UNIT_STATE_CASTING))
@@ -4155,8 +4162,8 @@ void Spell::EffectDuel(SpellEffIndex effIndex)
     WorldPacket data(SMSG_DUEL_REQUESTED, 8 + 8);
     data << pGameObj->GetGUID();
     data << caster->GetGUID();
-    caster->GetSession()->SendPacket(&data);
-    target->GetSession()->SendPacket(&data);
+    caster->SendDirectMessage(&data);
+    target->SendDirectMessage(&data);
 
     // create duel-info
     bool isMounted = (GetSpellInfo()->Id == 62875);
@@ -4238,7 +4245,7 @@ void Spell::EffectSummonPlayer(SpellEffIndex /*effIndex*/)
     data << m_caster->GetGUID();                                // summoner guid
     data << uint32(m_caster->GetZoneId());                      // summoner zone
     data << uint32(MAX_PLAYER_SUMMON_DELAY * IN_MILLISECONDS);  // auto decline after msecs
-    player->GetSession()->SendPacket(&data);
+    player->SendDirectMessage(&data);
 }
 
 void Spell::EffectActivateObject(SpellEffIndex effIndex)
@@ -4778,7 +4785,7 @@ void Spell::EffectForceDeselect(SpellEffIndex /*effIndex*/)
 
     float dist = m_caster->GetVisibilityRange() + VISIBILITY_COMPENSATION;
     Acore::MessageDistDelivererToHostile notifier(m_caster, &data, dist);
-    Cell::VisitWorldObjects(m_caster, notifier, dist);
+    Cell::VisitObjects(m_caster, notifier, dist);
 
     // xinef: we should also force pets to remove us from current target
     Unit::AttackerSet attackerSet;
@@ -4803,7 +4810,7 @@ void Spell::EffectForceDeselect(SpellEffIndex /*effIndex*/)
         UnitList targets;
         Acore::AnyUnfriendlyUnitInObjectRangeCheck u_check(m_caster, m_caster, m_caster->GetVisibilityRange()); // no VISIBILITY_COMPENSATION, distance is enough
         Acore::UnitListSearcher<Acore::AnyUnfriendlyUnitInObjectRangeCheck> searcher(m_caster, targets, u_check);
-        Cell::VisitAllObjects(m_caster, searcher, m_caster->GetVisibilityRange());
+        Cell::VisitObjects(m_caster, searcher, m_caster->GetVisibilityRange());
         for (UnitList::iterator iter = targets.begin(); iter != targets.end(); ++iter)
         {
             if (!(*iter)->HasUnitState(UNIT_STATE_CASTING))
@@ -5006,7 +5013,24 @@ void Spell::EffectKnockBack(SpellEffIndex effIndex)
         return;
 
     float x, y;
-    if (m_spellInfo->Effects[effIndex].Effect == SPELL_EFFECT_KNOCK_BACK_DEST)
+    Unit* reflectionSource = m_reflectionTarget;
+
+    if (!reflectionSource && !m_reflectionTargetGuid.IsEmpty())
+    {
+        if (Unit* resolvedSource = ObjectAccessor::GetUnit(*m_caster, m_reflectionTargetGuid))
+            reflectionSource = resolvedSource;
+    }
+
+    if (reflectionSource)
+    {
+        reflectionSource->GetPosition(x, y);
+    }
+    else if (!m_reflectionTargetGuid.IsEmpty())
+    {
+        x = m_reflectionTargetPosition.GetPositionX();
+        y = m_reflectionTargetPosition.GetPositionY();
+    }
+    else if (m_spellInfo->Effects[effIndex].Effect == SPELL_EFFECT_KNOCK_BACK_DEST)
     {
         if (m_targets.HasDst())
             destTarget->GetPosition(x, y);
@@ -5206,7 +5230,7 @@ void Spell::EffectResurrectPet(SpellEffIndex /*effIndex*/)
     {
         // Position passed to SummonPet is irrelevant with current implementation,
         // pet will be relocated without using these coords in Pet::LoadPetFromDB
-        player->SummonPet(0, 0.0f, 0.0f, 0.0f, 0.0f, SUMMON_PET, 0s, damage);
+        player->SummonPet(0, 0.0f, 0.0f, 0.0f, 0.0f, SUMMON_PET, 0ms, damage);
         return;
     }
 
@@ -6338,5 +6362,5 @@ void Spell::EffectSummonRaFFriend(SpellEffIndex  /*effIndex*/)
     data << m_caster->GetGUID();
     data << uint32(m_caster->GetZoneId());
     data << uint32(MAX_PLAYER_SUMMON_DELAY * IN_MILLISECONDS); // auto decline after msecs
-    player->GetSession()->SendPacket(&data);
+    player->SendDirectMessage(&data);
 }

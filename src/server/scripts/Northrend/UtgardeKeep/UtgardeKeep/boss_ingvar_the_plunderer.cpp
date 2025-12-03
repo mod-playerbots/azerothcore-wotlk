@@ -56,27 +56,16 @@ enum eSpells
     SPELL_RESURRECTION_HEAL         = 42704,
     SPELL_INGVAR_TRANSFORM          = 42796,
 
-    SPELL_STAGGERING_ROAR_N         = 42708,
-    SPELL_STAGGERING_ROAR_H         = 59708,
+    SPELL_STAGGERING_ROAR           = 42708,
     SPELL_CLEAVE                    = 42724,
-    SPELL_SMASH_N                   = 42669,
-    SPELL_SMASH_H                   = 59706,
-    SPELL_ENRAGE_N                  = 42705,
-    SPELL_ENRAGE_H                  = 59707,
+    SPELL_SMASH                     = 42669,
+    SPELL_ENRAGE                    = 42705,
 
-    SPELL_DREADFUL_ROAR_N           = 42729,
-    SPELL_DREADFUL_ROAR_H           = 59734,
-    SPELL_WOE_STRIKE_N              = 42730,
-    SPELL_WOE_STRIKE_H              = 59735,
+    SPELL_DREADFUL_ROAR             = 42729,
+    SPELL_WOE_STRIKE                = 42730,
     SPELL_DARK_SMASH                = 42723,
     SPELL_SHADOW_AXE                = 42749,
 };
-
-#define SPELL_STAGGERING_ROAR       DUNGEON_MODE(SPELL_STAGGERING_ROAR_N, SPELL_STAGGERING_ROAR_H)
-#define SPELL_DREADFUL_ROAR         DUNGEON_MODE(SPELL_DREADFUL_ROAR_N, SPELL_DREADFUL_ROAR_H)
-#define SPELL_WOE_STRIKE            DUNGEON_MODE(SPELL_WOE_STRIKE_N, SPELL_WOE_STRIKE_H)
-#define SPELL_SMASH                 DUNGEON_MODE(SPELL_SMASH_N, SPELL_SMASH_H)
-#define SPELL_ENRAGE                DUNGEON_MODE(SPELL_ENRAGE_N, SPELL_ENRAGE_H)
 
 enum eEvents
 {
@@ -307,9 +296,6 @@ struct boss_ingvar_the_plunderer : public ScriptedAI
         case EVENT_SPELL_ROAR:
             Talk(EMOTE_ROAR);
 
-            me->_AddCreatureSpellCooldown(SPELL_STAGGERING_ROAR, 0, 0);
-            me->_AddCreatureSpellCooldown(SPELL_DREADFUL_ROAR, 0, 0);
-
             if (me->GetDisplayId() == DISPLAYID_DEFAULT)
                 me->CastSpell((Unit*)nullptr, SPELL_STAGGERING_ROAR, false);
             else
@@ -366,7 +352,7 @@ struct boss_ingvar_the_plunderer : public ScriptedAI
         case EVENT_AXE_PICKUP:
             if (Creature* c = ObjectAccessor::GetCreature(*me, ThrowGUID))
             {
-                c->DestroyForNearbyPlayers();
+                c->DestroyForVisiblePlayers();
                 c->DespawnOrUnsummon();
                 summons.DespawnAll();
             }

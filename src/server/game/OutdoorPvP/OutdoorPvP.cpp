@@ -336,7 +336,7 @@ bool OPvPCapturePoint::Update(uint32 diff)
     std::list<Player*> players;
     Acore::AnyPlayerInObjectRangeCheck checker(_capturePoint, radius);
     Acore::PlayerListSearcher<Acore::AnyPlayerInObjectRangeCheck> searcher(_capturePoint, players, checker);
-    Cell::VisitWorldObjects(_capturePoint, searcher, radius);
+    Cell::VisitObjects(_capturePoint, searcher, radius);
 
     for (auto& itr : players)
     {
@@ -635,7 +635,7 @@ void OutdoorPvP::BroadcastPacket(WorldPacket& data) const
     for (auto const& playerSet : _players)
         for (auto itr : playerSet)
             if (Player* const player = ObjectAccessor::FindPlayer(itr))
-                player->GetSession()->SendPacket(&data);
+                player->SendDirectMessage(&data);
 }
 
 void OutdoorPvP::RegisterZone(uint32 zoneId)

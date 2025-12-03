@@ -302,7 +302,7 @@ class spell_hun_taming_the_beast : public AuraScript
     {
         if (Unit* target = GetTarget())
             if (Creature* creature = target->ToCreature())
-                creature->DespawnOrUnsummon(1);
+                creature->DespawnOrUnsummon(1ms);
     }
 
     void Register() override
@@ -843,11 +843,7 @@ class spell_hun_pet_carrion_feeder : public SpellScript
         // search for nearby enemy corpse in range
         Acore::AnyDeadUnitSpellTargetInRangeCheck check(caster, max_range, GetSpellInfo(), TARGET_CHECK_ENEMY);
         Acore::WorldObjectSearcher<Acore::AnyDeadUnitSpellTargetInRangeCheck> searcher(caster, result, check);
-        Cell::VisitWorldObjects(caster, searcher, max_range);
-        if (!result)
-        {
-            Cell::VisitGridObjects(caster, searcher, max_range);
-        }
+        Cell::VisitObjects(caster, searcher, max_range);
         if (!result)
         {
             return SPELL_FAILED_NO_EDIBLE_CORPSES;

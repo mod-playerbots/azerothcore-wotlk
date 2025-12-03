@@ -789,7 +789,7 @@ void WorldSession::HandleTextEmoteOpcode(WorldPacket& recvData)
     Acore::EmoteChatBuilder emote_builder(*GetPlayer(), text_emote, emoteNum, unit);
     Acore::LocalizedPacketDo<Acore::EmoteChatBuilder > emote_do(emote_builder);
     Acore::PlayerDistWorker<Acore::LocalizedPacketDo<Acore::EmoteChatBuilder > > emote_worker(GetPlayer(), sWorld->getFloatConfig(CONFIG_LISTEN_RANGE_TEXTEMOTE), emote_do);
-    Cell::VisitWorldObjects(GetPlayer(), emote_worker, sWorld->getFloatConfig(CONFIG_LISTEN_RANGE_TEXTEMOTE));
+    Cell::VisitObjects(GetPlayer(), emote_worker, sWorld->getFloatConfig(CONFIG_LISTEN_RANGE_TEXTEMOTE));
 
     GetPlayer()->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_DO_EMOTE, text_emote, 0, unit);
 
@@ -812,7 +812,7 @@ void WorldSession::HandleChatIgnoredOpcode(WorldPacket& recvData)
 
     WorldPacket data;
     ChatHandler::BuildChatPacket(data, CHAT_MSG_IGNORED, LANG_UNIVERSAL, _player, _player, GetPlayer()->GetName());
-    player->GetSession()->SendPacket(&data);
+    player->SendDirectMessage(&data);
 }
 
 void WorldSession::HandleChannelDeclineInvite(WorldPacket& recvPacket)

@@ -554,17 +554,13 @@ void DBUpdater<T>::ApplyFile(DatabaseWorkerPool<T>& pool, std::string const& hos
     if (ssl == "ssl")
         args.emplace_back("--ssl-mode=REQUIRED");
 
-    // Execute sql file
-    args.emplace_back("-e");
-    args.emplace_back(Acore::StringFormat("BEGIN; SOURCE {}; COMMIT;", path.generic_string()));
-
     // Database
     if (!database.empty())
         args.emplace_back(database);
 
     // Invokes a mysql process which doesn't leak credentials to logs
     int const ret = Acore::StartProcess(DBUpdaterUtil::GetCorrectedMySQLExecutable(), args,
-        "sql.updates", "", true);
+        "sql.updates", path.generic_string(), true);
 
     if (ret != EXIT_SUCCESS)
     {
@@ -575,7 +571,13 @@ void DBUpdater<T>::ApplyFile(DatabaseWorkerPool<T>& pool, std::string const& hos
             "If you are a developer, please fix your sql query.",
             path.generic_string(), pool.GetConnectionInfo()->database);
 
-        throw UpdateException("update failed");
+        if (!sConfigMgr->isDryRun())
+        {
+            if (uint32 delay = sConfigMgr->GetOption<uint32>("Updates.ExceptionShutdownDelay", 10000))
+                std::this_thread::sleep_for(Milliseconds(delay));
+
+            throw UpdateException("update failed");
+        }
     }
 }
 

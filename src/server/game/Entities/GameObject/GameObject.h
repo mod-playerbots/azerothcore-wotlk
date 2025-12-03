@@ -156,8 +156,8 @@ public:
 
     void SaveToDB(bool saveAddon = false);
     void SaveToDB(uint32 mapid, uint8 spawnMask, uint32 phaseMask, bool saveAddon = false);
-    bool LoadFromDB(ObjectGuid::LowType guid, Map* map) { return LoadGameObjectFromDB(guid, map, false); }
-    bool LoadGameObjectFromDB(ObjectGuid::LowType guid, Map* map, bool addToMap = true);
+    virtual bool LoadFromDB(ObjectGuid::LowType guid, Map* map) { return LoadGameObjectFromDB(guid, map, false); }
+    virtual bool LoadGameObjectFromDB(ObjectGuid::LowType guid, Map* map, bool addToMap = true);
     void DeleteFromDB();
 
     void SetOwnerGUID(ObjectGuid owner)
@@ -231,8 +231,8 @@ public:
     void RemoveLootMode(uint16 lootMode) { m_LootMode &= ~lootMode; }
     void ResetLootMode() { m_LootMode = LOOT_MODE_DEFAULT; }
 
-    void AddToSkillupList(ObjectGuid playerGuid);
-    [[nodiscard]] bool IsInSkillupList(ObjectGuid playerGuid) const;
+    void AddToSkillupList(ObjectGuid const& playerGuid);
+    [[nodiscard]] bool IsInSkillupList(ObjectGuid const& playerGuid) const;
 
     void AddUniqueUse(Player* player);
     void AddUse() { ++m_usetimes; }
@@ -414,7 +414,7 @@ private:
     void UpdatePackedRotation();
 
     //! Object distance/size - overridden from Object::_IsWithinDist. Needs to take in account proper GO size.
-    bool _IsWithinDist(WorldObject const* obj, float dist2compare, bool /*is3D*/, bool /*useBoundingRadius = true*/) const override
+    bool _IsWithinDist(WorldObject const* obj, float dist2compare, bool /*is3D*/, bool /*incOwnRadius = true*/, bool /*incTargetRadius = true*/) const override
     {
         //! Following check does check 3d distance
         dist2compare += obj->GetObjectSize();

@@ -38,7 +38,7 @@
 #include "WorldPacket.h"
 #include "WorldSession.h"
 
-Pet::Pet(Player* owner, PetType type) : Guardian(nullptr, owner ? owner->GetGUID() : ObjectGuid::Empty, true),
+Pet::Pet(Player* owner, PetType type) : Guardian(nullptr, owner ? owner->GetGUID() : ObjectGuid::Empty),
     m_usedTalentCount(0),
     m_removed(false),
     m_owner(owner),
@@ -75,7 +75,7 @@ void Pet::AddToWorld()
     if (!IsInWorld())
     {
         ///- Register the pet for guid lookup
-        GetMap()->GetObjectsStore().Insert<Pet>(GetGUID(), this);
+        GetMap()->GetObjectsStore().Insert<Creature>(GetGUID(), this);
         Unit::AddToWorld();
         Motion_Initialize();
         AIM_Initialize();
@@ -126,7 +126,7 @@ void Pet::RemoveFromWorld()
     {
         ///- Don't call the function for Creature, normal mobs + totems go in a different storage
         Unit::RemoveFromWorld();
-        GetMap()->GetObjectsStore().Remove<Pet>(GetGUID());
+        GetMap()->GetObjectsStore().Remove<Creature>(GetGUID());
     }
 }
 
@@ -692,7 +692,7 @@ void Pet::Update(uint32 diff)
                     }
                 }
 
-                if (m_duration > 0s)
+                if (m_duration > 0ms)
                 {
                     if (m_duration > _diff)
                         m_duration -= _diff;
@@ -708,7 +708,7 @@ void Pet::Update(uint32 diff)
                 if (getPowerType() == POWER_FOCUS)
                 {
                     m_petRegenTimer -= _diff;
-                    if (m_petRegenTimer <= 0s)
+                    if (m_petRegenTimer <= 0ms)
                     {
                         m_petRegenTimer += PET_FOCUS_REGEN_INTERVAL;
                         Regenerate(POWER_FOCUS);
@@ -1026,7 +1026,7 @@ bool Guardian::InitStatsForLevel(uint8 petlevel)
     Unit* owner = GetOwner();
     if (!owner) // just to be sure, asynchronous now
     {
-        DespawnOrUnsummon(1000);
+        DespawnOrUnsummon(1s);
         return false;
     }
 
@@ -1512,7 +1512,7 @@ void Pet::_LoadSpellCooldowns(PreparedQueryResult result)
         if (!cooldowns.empty() && GetOwner())
         {
             BuildCooldownPacket(data, SPELL_COOLDOWN_FLAG_NONE, cooldowns);
-            GetOwner()->GetSession()->SendPacket(&data);
+            GetOwner()->SendDirectMessage(&data);
         }
     }
 }
