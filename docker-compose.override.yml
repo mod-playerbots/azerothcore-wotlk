@@ -1,10 +1,11 @@
 services:
   ac-db-import:
+    container_name: testing-ac-db-import
     environment:
       AC_LOGIN_DATABASE_INFO: "192.168.144.7;3306;root;${DOCKER_DB_ROOT_PASSWORD:-password};acore_auth"
 
   ac-database:
-    container_name: ac-database
+    container_name: testing-ac-database
     image: mysql:8.4
     networks:
       - ac-network
@@ -24,6 +25,7 @@ services:
       retries: 40
 
   ac-worldserver:
+    container_name: testing-ac-worldserver
     privileged: true
     environment:
       AC_LOGIN_DATABASE_INFO: "192.168.144.7;3306;root;${DOCKER_DB_ROOT_PASSWORD:-password};acore_auth"
@@ -31,20 +33,25 @@ services:
       AC_AI_PLAYERBOT_ENABLE_BROADCASTS: 0
       AC_OLLAMA_CHAT_DEBUG_ENABLED: 1
       AC_OLLAMA_CHAT_MODEL: llama3.1:latest # Modify if needed
-      AC_OLLAMA_CHAT_URL: http://ac-ollamaserver:11434/api/generate
+      AC_OLLAMA_CHAT_URL: http://testing-ac-ollamaserver:11434/api/generate
     ports:
       - ${DOCKER_WORLD_EXTERNAL_PORT:-8585}:8585
       - ${DOCKER_SOAP_EXTERNAL_PORT:-8787}:8787
     networks:
-      - azerothcore-wotlk_ac-network
+      - ac-network
     volumes:
       - ./modules:/azerothcore/modules:ro
 
-  #  ac-authserver:
-  #    environment:
-  #      AC_LOGIN_DATABASE_INFO: "192.168.144.7;3306;root;${DOCKER_DB_ROOT_PASSWORD:-password};acore_auth"
+  ac-authserver:
+    container_name: testing-ac-authserver
+    environment:
+      AC_LOGIN_DATABASE_INFO: "192.168.144.7;3306;root;${DOCKER_DB_ROOT_PASSWORD:-password};acore_auth"
+
+  ac-client-data-init:
+    container_name: testing-ac-client-data-init
 
   ac-dev-server:
+    container_name: testing-ac-dev-server
     environment:
       AC_LOGIN_DATABASE_INFO: "192.168.144.7;3306;root;${DOCKER_DB_ROOT_PASSWORD:-password};acore_auth"
     ports:
@@ -53,21 +60,18 @@ services:
       - ${DOCKER_SOAP_EXTERNAL_PORT:-8787}:8787
 
   ac-ollamaserver:
+    container_name: testing-ac-ollamaserver
     image: ollama/ollama
-    container_name: ac-ollamaserver
     volumes:
       - ollama:/root/.ollama
     ports:
       - "11434:11434"
     networks:
-      - azerothcore-wotlk_ac-network
+      - ac-network
     restart: unless-stopped
-    command: ["ollama", "serve"]
 
 volumes:
   ollama:
 
 networks:
-  azerothcore-wotlk_ac-network:
-    external: true
-    name: azerothcore-wotlk_ac-network
+  ac-network:
