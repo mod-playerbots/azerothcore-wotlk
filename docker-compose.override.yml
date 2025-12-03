@@ -3,6 +3,26 @@ services:
     environment:
       AC_LOGIN_DATABASE_INFO: "192.168.144.7;3306;root;${DOCKER_DB_ROOT_PASSWORD:-password};acore_auth"
 
+  ac-database:
+    container_name: ac-database
+    image: mysql:8.4
+    networks:
+      - ac-network
+    ports:
+      - ${DOCKER_DB_EXTERNAL_PORT:-3306}:3306
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DOCKER_DB_ROOT_PASSWORD:-password}
+    volumes:
+      - type: volume
+        source: ac-database
+        target: /var/lib/mysql
+    restart: unless-stopped
+    healthcheck:
+      test: '/usr/bin/mysql --user=root --password=$$MYSQL_ROOT_PASSWORD --execute "SHOW DATABASES;"'
+      interval: 5s
+      timeout: 10s
+      retries: 40
+
   ac-worldserver:
     privileged: true
     environment:
@@ -12,18 +32,25 @@ services:
       AC_OLLAMA_CHAT_DEBUG_ENABLED: 1
       AC_OLLAMA_CHAT_MODEL: llama3.1:latest # Modify if needed
       AC_OLLAMA_CHAT_URL: http://ac-ollamaserver:11434/api/generate
-    volumes:
-      - ./modules:/azerothcore/modules:ro
+    ports:
+      - ${DOCKER_WORLD_EXTERNAL_PORT:-8585}:8585
+      - ${DOCKER_SOAP_EXTERNAL_PORT:-8787}:8787
     networks:
       - azerothcore-wotlk_ac-network
+    volumes:
+      - ./modules:/azerothcore/modules:ro
 
-#  ac-authserver:
-#    environment:
-#      AC_LOGIN_DATABASE_INFO: "192.168.144.7;3306;root;${DOCKER_DB_ROOT_PASSWORD:-password};acore_auth"
+  #  ac-authserver:
+  #    environment:
+  #      AC_LOGIN_DATABASE_INFO: "192.168.144.7;3306;root;${DOCKER_DB_ROOT_PASSWORD:-password};acore_auth"
 
   ac-dev-server:
     environment:
       AC_LOGIN_DATABASE_INFO: "192.168.144.7;3306;root;${DOCKER_DB_ROOT_PASSWORD:-password};acore_auth"
+    ports:
+      - ${DOCKER_AUTH_EXTERNAL_PORT:-3724}:3724
+      - ${DOCKER_WORLD_EXTERNAL_PORT:-8585}:8585
+      - ${DOCKER_SOAP_EXTERNAL_PORT:-8787}:8787
 
   ac-ollamaserver:
     image: ollama/ollama
