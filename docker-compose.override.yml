@@ -24,6 +24,31 @@ services:
       timeout: 10s
       retries: 40
 
+  # Bot relocation init service - runs before worldserver starts
+  ac-bot-relocate:
+    container_name: testing-ac-bot-relocate
+    image: mysql:8.4
+    networks:
+      - ac-network
+    volumes:
+      - ./relocate_bots_startup.sql:/scripts/relocate_bots.sql:ro
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DOCKER_DB_ROOT_PASSWORD:-password}
+    depends_on:
+      ac-database:
+        condition: service_healthy
+    command: >
+      sh -c "
+        echo 'Waiting for database to be ready...';
+        until mysql -h testing-ac-database -uroot -p$$MYSQL_ROOT_PASSWORD -e 'SELECT 1' > /dev/null 2>&1; do
+          sleep 2;
+        done;
+        echo 'Database is ready. Running bot relocation...';
+        mysql -h testing-ac-database -uroot -p$$MYSQL_ROOT_PASSWORD < /scripts/relocate_bots.sql;
+        echo 'Bot relocation complete!';
+      "
+    restart: "no"
+
   ac-worldserver:
     container_name: testing-ac-worldserver
     privileged: true
@@ -31,12 +56,21 @@ services:
       AC_LOGIN_DATABASE_INFO: "192.168.144.7;3306;root;${DOCKER_DB_ROOT_PASSWORD:-password};acore_auth"
       AC_AI_PLAYERBOT_ENABLED: 1
       AC_AI_PLAYERBOT_ENABLE_BROADCASTS: 0
-      AC_OLLAMA_CHAT_DEBUG_ENABLED: 1
-      AC_OLLAMA_CHAT_MODEL: llama3.2:3b
-      AC_OLLAMA_CHAT_URL: http://macmini.rollet.family:11434/api/generate
+##      AC_OLLAMA_CHAT_DEBUG_ENABLED: 1
+##      AC_OLLAMA_CHAT_MODEL: llama3.2:3b
+##      AC_OLLAMA_CHAT_URL: http://macmini.rollet.family:11434/api/generate
+      AC_OLLAMA_CHAT_EVENT_TYPE_LEVELED_UP__CHANCE: 75
+      AC_OLLAMA_CHAT_EVENT_TYPE_COMPLETED_QUEST__CHANCE: 35
+      AC_OLLAMA_CHAT_EVENT_TYPE_GOT_ITEM__CHANCE: 65
+      AC_OLLAMA_CHAT_EVENT_TYPE_DIED__CHANCE: 18
+      AC_OLLAMA_CHAT_EVENT_TYPE_DEFEATED__CHANCE: 1
+      AC_OLLAMA_CHAT_EVENT_CHATTER_BOT_COMMENT_CHANCE: 50
+      AC_OLLAMA_CHAT_RANDOM_CHATTER_BOT_COMMENT_CHANCE: 1
+      AC_OLLAMA_CHAT_EVENT_COOLDOWN_TIME: 120
     ports:
       - ${DOCKER_WORLD_EXTERNAL_PORT:-8585}:8585
       - ${DOCKER_SOAP_EXTERNAL_PORT:-8787}:8787
+      - 3443:3443
     networks:
       - ac-network
     volumes:
@@ -45,6 +79,8 @@ services:
       ac-database:
         condition: service_healthy
       ac-client-data-init:
+        condition: service_completed_successfully
+      ac-bot-relocate:
         condition: service_completed_successfully
 
   ac-authserver:
@@ -68,6 +104,7 @@ services:
       - ${DOCKER_AUTH_EXTERNAL_PORT:-3724}:3724
       - ${DOCKER_WORLD_EXTERNAL_PORT:-8585}:8585
       - ${DOCKER_SOAP_EXTERNAL_PORT:-8787}:8787
+      - 3443:3443
 
   # Commented out local Ollama container - now using Mac Mini
   # ac-ollamaserver:
