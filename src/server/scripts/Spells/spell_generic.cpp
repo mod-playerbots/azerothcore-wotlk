@@ -1,14 +1,14 @@
 /*
  * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 3 of the License, or (at your
- * option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
  * You should have received a copy of the GNU General Public License along
@@ -4422,7 +4422,9 @@ class spell_gen_eject_all_passengers : public SpellScript
     }
 };
 
-/* 62539 - Eject Passenger 2
+/* 49259 - Despawn Driver
+   49261 - Dismount Passenger
+   62539 - Eject Passenger 2
    64614 - Eject Passenger 4
    64629 - Eject Passenger 1
    64630 - Eject Passenger 2
@@ -5670,6 +5672,29 @@ class spell_gen_bm_on : public SpellScript
     }
 };
 
+class spell_gen_whisper_to_controller : public SpellScript
+{
+    PrepareSpellScript(spell_gen_whisper_to_controller);
+
+    bool Validate(SpellInfo const* spellInfo) override
+    {
+        return sObjectMgr->GetBroadcastText(uint32(spellInfo->GetEffect(EFFECT_0).CalcValue()));
+    }
+
+    void HandleScript(SpellEffIndex /*effIndex*/)
+    {
+        if (Unit* caster = GetCaster())
+            if (TempSummon* casterSummon = caster->ToTempSummon())
+                if (Player* target = casterSummon->GetSummonerUnit()->ToPlayer())
+                    casterSummon->Unit::Whisper(uint32(GetEffectValue()), target, false);
+    }
+
+    void Register() override
+    {
+        OnEffectHit += SpellEffectFn(spell_gen_whisper_to_controller::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+    }
+};
+
 void AddSC_generic_spell_scripts()
 {
     RegisterSpellScript(spell_silithyst);
@@ -5843,4 +5868,5 @@ void AddSC_generic_spell_scripts()
     RegisterSpellScript(spell_gen_invis_on);
     RegisterSpellScript(spell_gen_bm_on);
     RegisterSpellScript(spell_gen_bm_off);
+    RegisterSpellScript(spell_gen_whisper_to_controller);
 }
