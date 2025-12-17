@@ -12,8 +12,8 @@
 #   ./update-azerothcore.sh --help       # Show this help
 #
 # Author: OpenCode AI Assistant
-# Date: 2025-12-02
-# Version: 1.0.0
+# Date: 2025-12-17
+# Version: 2.0.0 (Production - with submodule fixes and backup integration)
 ################################################################################
 
 set -euo pipefail  # Exit on error, undefined vars, pipe failures
@@ -25,6 +25,7 @@ set -euo pipefail  # Exit on error, undefined vars, pipe failures
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOGS_DIR="$HOME/logs"
 CONFIG_FILE="${SCRIPT_DIR}/.notification-config"
+BACKUP_SCRIPT="${SCRIPT_DIR}/mysqlbackup.sh"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 LOG_FILE="${LOGS_DIR}/update_${TIMESTAMP}.log"
 BUILD_LOG_FILE="${LOGS_DIR}/build_${TIMESTAMP}.log"
@@ -118,7 +119,7 @@ send_uptimekuma_notification() {
     
     log_info "Sending notification to Uptime Kuma: status=${status}, msg=${message}"
     
-    if curl -fsS --retry 3 --max-time 10 "${url}" &>/dev/null; then
+    if /usr/bin/curl -fsS --retry 3 --max-time 10 "${url}" &>/dev/null; then
         log_success "Uptime Kuma notification sent successfully"
         return 0
     else
@@ -130,6 +131,19 @@ send_uptimekuma_notification() {
 ################################################################################
 # UTILITY FUNCTIONS
 ################################################################################
+
+convert_ssh_to_https() {
+    local url="$1"
+    # Convert git@github.com:user/repo.git to https://github.com/user/repo.git
+    if [[ "$url" =~ ^git@github\.com:(.*)$ ]]; then
+        echo "https://github.com/${BASH_REMATCH[1]}"
+    # Keep local paths as-is (for local repositories)
+    elif [[ "$url" =~ ^/ ]] || [[ "$url" =~ ^file:// ]]; then
+        echo "$url"
+    else
+        echo "$url"
+    fi
+}
 
 get_duration() {
     local end_time=$(date +%s)
@@ -147,43 +161,85 @@ get_duration_ms() {
 
 cleanup_old_logs() {
     log_info "Cleaning up logs older than 90 days..."
-    find "${LOGS_DIR}" -name "*.log" -type f -mtime +90 -delete 2>/dev/null || true
-    local deleted_count=$(find "${LOGS_DIR}" -name "*.log" -type f -mtime +90 | wc -l)
-    log_info "Cleaned up old logs (found ${deleted_count} files to delete)"
+    /usr/bin/find "${LOGS_DIR}" -name "*.log" -type f -mtime +90 -delete 2>/dev/null || true
+    local deleted_count=$(/usr/bin/find "${LOGS_DIR}" -name "*.log" -type f -mtime +90 2>/dev/null | wc -l)
+    log_info "Cleaned up old logs (${deleted_count} files checked)"
 }
 
 show_help() {
-    cat << EOF
+    cat << 'HELPEOF'
 
-${BOLD}AzerothCore Automated Update Script${NC}
+AzerothCore Automated Update Script (Production)
 
-${BOLD}USAGE:${NC}
-    $0 [OPTIONS]
+USAGE:
+    ./update-azerothcore.sh [OPTIONS]
 
-${BOLD}OPTIONS:${NC}
+OPTIONS:
     --git-only      Update Git repositories only, skip Docker rebuild
     --dry-run       Show what would be updated without making changes
     --help          Show this help message
 
-${BOLD}EXAMPLES:${NC}
-    $0                      # Update everything and rebuild (default)
-    $0 --git-only          # Update Git only, no rebuild
-    $0 --dry-run           # Preview updates
+EXAMPLES:
+    ./update-azerothcore.sh                 # Update everything and rebuild (default)
+    ./update-azerothcore.sh --git-only     # Update Git only, no rebuild
+    ./update-azerothcore.sh --dry-run      # Preview updates
 
-${BOLD}CRON SCHEDULE:${NC}
-    Daily (4:15 PM EST):    15 16 * * * $0 --git-only
-    Weekly (Sun 9 AM EST):  0 9 * * 0 $0
+BRANCH:
+    Playerbot (Production Environment)
 
-${BOLD}LOGS:${NC}
-    Location: ${LOGS_DIR}
+LOGS:
+    Location: ~/logs
     Retention: 90 days
 
-${BOLD}NOTIFICATIONS:${NC}
-    Configure: ${SCRIPT_DIR}/.notification-config
+BACKUP:
+    MySQL backup runs automatically before updates
+
+NOTIFICATIONS:
+    Configure: .notification-config
     Flow: Script → Uptime Kuma → Discord
 
-EOF
+NOTE:
+    This script will FORCE RESET all modules to match their remote branches,
+    abandoning any local changes or commits. This ensures a clean update.
+
+HELPEOF
     exit 0
+}
+
+################################################################################
+# BACKUP FUNCTION
+################################################################################
+
+run_mysql_backup() {
+    log_header "Running MySQL Backup"
+    
+    if [[ "${DRY_RUN}" == "true" ]]; then
+        log_info "[DRY RUN] Would run MySQL backup script"
+        return 0
+    fi
+    
+    if [[ ! -f "${BACKUP_SCRIPT}" ]]; then
+        log_error "Backup script not found: ${BACKUP_SCRIPT}"
+        return 1
+    fi
+    
+    if [[ ! -x "${BACKUP_SCRIPT}" ]]; then
+        log_info "Making backup script executable..."
+        /bin/chmod +x "${BACKUP_SCRIPT}"
+    fi
+    
+    log_info "Starting MySQL backup (this may take several minutes)..."
+    local backup_start=$(date +%s)
+    
+    if "${BACKUP_SCRIPT}" 2>&1 | tee -a "${LOG_FILE}"; then
+        local backup_end=$(date +%s)
+        local backup_duration=$((backup_end - backup_start))
+        log_success "MySQL backup completed in $((backup_duration / 60))m $((backup_duration % 60))s"
+        return 0
+    else
+        log_error "MySQL backup failed"
+        return 1
+    fi
 }
 
 ################################################################################
@@ -191,7 +247,7 @@ EOF
 ################################################################################
 
 validate_environment() {
-    log_header "Pre-flight Checks"
+    log_header "Pre-flight Checks (Production Environment)"
     
     # Check if we're in the correct directory
     if [[ ! -f "${SCRIPT_DIR}/.git/config" ]]; then
@@ -222,7 +278,7 @@ validate_environment() {
     fi
     
     # Check network connectivity
-    if ! curl -fsS --max-time 5 https://github.com &>/dev/null; then
+    if ! /usr/bin/curl -fsS --max-time 5 https://github.com &>/dev/null; then
         log_error "No network connectivity to GitHub"
         return 1
     fi
@@ -231,23 +287,23 @@ validate_environment() {
     # Check for local changes (excluding submodule pointer updates)
     log_info "Checking for local changes..."
     # Get status excluding submodule changes (modules/* directory)
-    LOCAL_CHANGES=$(git status --porcelain | grep -v "^.[M] modules/")
+    LOCAL_CHANGES=$(git status --porcelain | grep -v "^.[M] modules/" || true)
     if [[ -n "$LOCAL_CHANGES" ]]; then
-    	log_error "Local changes detected. Commit or stash changes before updating."
-    	log_error "Changed files:"
-    	echo "$LOCAL_CHANGES" | while read line; do
+        log_error "Local changes detected. Commit or stash changes before updating."
+        log_error "Changed files:"
+        echo "$LOCAL_CHANGES" | while read line; do
             log_error "  $line"
-   	done
-   	send_notification "down" "Local changes detected - update blocked"
-    	exit 1
+        done
+        send_uptimekuma_notification "down" "Local%20changes%20detected%20-%20update%20blocked"
+        exit 1
     fi
     # Log submodule changes if any (informational only)
-    SUBMODULE_CHANGES=$(git status --porcelain | grep "^.[M] modules/")
+    SUBMODULE_CHANGES=$(git status --porcelain | grep "^.[M] modules/" || true)
     if [[ -n "$SUBMODULE_CHANGES" ]]; then
-    	log_info "Submodule pointer updates detected (normal, will be updated):"
-    	echo "$SUBMODULE_CHANGES" | while read line; do
+        log_info "Submodule pointer updates detected (normal, will be updated):"
+        echo "$SUBMODULE_CHANGES" | while read line; do
             log_info "  $line"
-    	done
+        done
     fi
 
     log_success "No local changes detected"
@@ -283,7 +339,7 @@ capture_versions() {
     for module in mod-*; do
         if [[ -d "${module}/.git" ]]; then
             cd "${module}" || continue
-            local module_version=$(git rev-parse --short HEAD)
+            local module_version=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
             if [[ "${prefix}" == "before" ]]; then
                 BEFORE_VERSIONS["${module}"]=${module_version}
             else
@@ -335,11 +391,159 @@ generate_change_report() {
 }
 
 ################################################################################
+# MODULE MANAGEMENT FUNCTIONS
+################################################################################
+
+clone_missing_modules() {
+    log_header "Checking for Missing Modules"
+    
+    if [[ "${DRY_RUN}" == "true" ]]; then
+        log_info "[DRY RUN] Would check and clone missing modules"
+        return 0
+    fi
+    
+    # Check if .gitmodules exists
+    if [[ ! -f "${SCRIPT_DIR}/.gitmodules" ]]; then
+        log_warning "No .gitmodules file found - skipping module checks"
+        return 0
+    fi
+    
+    # Ensure git allows file protocol for local repositories
+    local current_protocol_setting=$(git config --global --get protocol.file.allow 2>/dev/null || echo "not-set")
+    if [[ "$current_protocol_setting" != "always" ]]; then
+        log_info "Setting git to allow file:// protocol for local repositories..."
+        git config --global protocol.file.allow always
+        log_success "Git file protocol enabled"
+    fi
+    
+    local cloned_count=0
+    local skipped_count=0
+    
+    # Parse .gitmodules and clone missing modules
+    local current_path=""
+    local current_url=""
+    local current_branch=""
+    
+    while IFS= read -r line; do
+        # Extract submodule path
+        if [[ "$line" =~ path[[:space:]]*=[[:space:]]*(.*) ]]; then
+            current_path="${BASH_REMATCH[1]}"
+            current_path="${current_path//\"/}"  # Remove quotes
+        fi
+        
+        # Extract submodule URL
+        if [[ "$line" =~ url[[:space:]]*=[[:space:]]*(.*) ]]; then
+            current_url="${BASH_REMATCH[1]}"
+            current_url="${current_url//\"/}"  # Remove quotes
+            # Convert SSH to HTTPS if needed
+            current_url=$(convert_ssh_to_https "$current_url")
+        fi
+        
+        # Extract branch
+        if [[ "$line" =~ branch[[:space:]]*=[[:space:]]*(.*) ]]; then
+            current_branch="${BASH_REMATCH[1]}"
+            current_branch="${current_branch//\"/}"  # Remove quotes
+        fi
+        
+        # When we have path and url (branch is optional), check if module exists
+        if [[ -n "$current_path" ]] && [[ -n "$current_url" ]]; then
+            # If no branch specified, default to master
+            if [[ -z "$current_branch" ]]; then
+                current_branch="master"
+                log_info "No branch specified for ${current_path}, defaulting to master"
+            fi
+            
+            local full_path="${SCRIPT_DIR}/${current_path}"
+            
+            if [[ ! -d "${full_path}/.git" ]] && [[ ! -f "${full_path}/.git" ]]; then
+                log_info "Module missing: ${current_path}"
+                log_info "  URL: ${current_url}"
+                log_info "  Branch: ${current_branch}"
+                
+                # Clone the module
+                log_info "  Cloning module..."
+                if git clone -b "${current_branch}" "${current_url}" "${full_path}" 2>&1 | tee -a "${LOG_FILE}"; then
+                    log_success "  ✓ Cloned ${current_path}"
+                    ((cloned_count++))
+                else
+                    log_error "  ✗ Failed to clone ${current_path}"
+                    log_warning "  Continuing with other modules..."
+                fi
+            else
+                ((skipped_count++))
+            fi
+            
+            # Reset for next submodule
+            current_path=""
+            current_url=""
+            current_branch=""
+        fi
+    done < "${SCRIPT_DIR}/.gitmodules"
+    
+    if [[ ${cloned_count} -gt 0 ]]; then
+        log_success "Cloned ${cloned_count} missing module(s)"
+    fi
+    
+    if [[ ${skipped_count} -gt 0 ]]; then
+        log_info "${skipped_count} module(s) already exist"
+    fi
+    
+    return 0
+}
+
+import_module_sql() {
+    log_header "Importing Module SQL Files"
+    
+    if [[ "${DRY_RUN}" == "true" ]]; then
+        log_info "[DRY RUN] Would import SQL files for new modules"
+        return 0
+    fi
+    
+    local imported_count=0
+    
+    cd "${SCRIPT_DIR}/modules" || return 1
+    
+    for module in mod-*; do
+        if [[ -d "${module}/data/sql/characters/base" ]]; then
+            log_info "Checking SQL files for ${module}..."
+            
+            # Import SQL files
+            for sql_file in "${module}/data/sql/characters/base"/*.sql; do
+                if [[ -f "$sql_file" ]]; then
+                    log_info "  Importing: $(basename "$sql_file")"
+                    if docker exec -i ac-database mysql -uroot -ppassword acore_characters < "$sql_file" 2>&1 | grep -v "password on the command line" | tee -a "${LOG_FILE}"; then
+                        log_success "    ✓ Imported"
+                        ((imported_count++))
+                    else
+                        # Check if error was just duplicate entry (already imported)
+                        if [[ $? -eq 1 ]]; then
+                            log_info "    (already imported or duplicate)"
+                        else
+                            log_warning "    Failed to import (may already exist)"
+                        fi
+                    fi
+                fi
+            done
+        fi
+    done
+    
+    cd "${SCRIPT_DIR}" || return 1
+    
+    if [[ ${imported_count} -gt 0 ]]; then
+        log_success "Imported ${imported_count} SQL file(s)"
+    else
+        log_info "No new SQL files to import"
+    fi
+    
+    return 0
+}
+
+################################################################################
 # UPDATE FUNCTIONS
 ################################################################################
 
 update_core() {
-    log_header "Updating Core Repository"
+    log_header "Updating Core Repository (Playerbot Branch)"
     
     if [[ "${DRY_RUN}" == "true" ]]; then
         log_info "[DRY RUN] Would fetch and pull Playerbot branch"
@@ -365,23 +569,74 @@ update_core() {
     return 0
 }
 
-update_submodules() {
-    log_header "Updating Submodules"
+update_modules() {
+    log_header "Updating Modules (Force Reset to Remote)"
     
     if [[ "${DRY_RUN}" == "true" ]]; then
-        log_info "[DRY RUN] Would update all submodules"
+        log_info "[DRY RUN] Would force reset all modules to remote branches"
         return 0
     fi
     
-    log_info "Updating all submodules to latest versions..."
-    if ! git submodule update --remote --merge 2>&1 | tee -a "${LOG_FILE}"; then
-        log_error "Failed to update submodules"
-        log_error "Attempting rollback..."
-        git submodule foreach 'git reset --hard ORIG_HEAD' 2>&1 | tee -a "${LOG_FILE}"
-        return 1
+    cd "${SCRIPT_DIR}/modules" || return 1
+    
+    local update_count=0
+    local error_count=0
+    
+    for module in mod-*; do
+        if [[ -d "${module}/.git" ]]; then
+            log_info "Updating ${module}..."
+            cd "${module}" || continue
+            
+            # Get current branch
+            local current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "master")
+            log_info "  Branch: ${current_branch}"
+            
+            # Check for local changes and warn user
+            local local_changes=$(git status --porcelain 2>/dev/null || true)
+            if [[ -n "$local_changes" ]]; then
+                log_warning "  Local changes detected - will be discarded:"
+                echo "$local_changes" | head -n 5 | while read line; do
+                    log_warning "    $line"
+                done
+            fi
+            
+            # Check if ahead of remote
+            local ahead_count=$(git rev-list --count origin/${current_branch}..HEAD 2>/dev/null || echo "0")
+            if [[ "$ahead_count" != "0" ]]; then
+                log_warning "  Branch is ${ahead_count} commit(s) ahead of origin - will be reset"
+            fi
+            
+            # Fetch updates
+            if ! git fetch origin "${current_branch}" 2>&1 | tee -a "${LOG_FILE}"; then
+                log_error "  ✗ Failed to fetch ${module}"
+                ((error_count++))
+                cd ..
+                continue
+            fi
+            
+            # Force reset to remote branch (abandoning local changes)
+            log_info "  Force resetting to origin/${current_branch}..."
+            if git reset --hard "origin/${current_branch}" 2>&1 | tee -a "${LOG_FILE}"; then
+                # Clean any untracked files
+                git clean -fd 2>&1 | tee -a "${LOG_FILE}"
+                log_success "  ✓ Reset ${module} to origin/${current_branch}"
+                ((update_count++))
+            else
+                log_error "  ✗ Failed to reset ${module}"
+                ((error_count++))
+            fi
+            
+            cd ..
+        fi
+    done
+    
+    cd "${SCRIPT_DIR}" || return 1
+    
+    log_info "Updated ${update_count} module(s)"
+    if [[ ${error_count} -gt 0 ]]; then
+        log_warning "${error_count} module(s) failed to update"
     fi
     
-    log_success "All submodules updated successfully"
     return 0
 }
 
@@ -448,20 +703,46 @@ main() {
     mkdir -p "${LOGS_DIR}"
     
     # Start logging
-    log_header "AzerothCore Update Started"
+    log_header "AzerothCore Production Update Started"
+    log_info "Environment: PRODUCTION (Playerbot branch)"
     log_info "Timestamp: $(date '+%Y-%m-%d %H:%M:%S %Z')"
     log_info "Mode: $([ "${GIT_ONLY}" == "true" ] && echo "Git-Only" || echo "Full Update + Rebuild")"
     log_info "Dry Run: $([ "${DRY_RUN}" == "true" ] && echo "Yes" || echo "No")"
     log_info "Log File: ${LOG_FILE}"
+    log_warning "Submodules will be FORCE RESET to remote branches (local changes discarded)"
     
     # Load notification config
     load_notification_config
     
+    # Run MySQL backup FIRST
+    if ! run_mysql_backup; then
+        log_error "MySQL backup failed - aborting update for safety"
+        send_uptimekuma_notification "down" "MySQL%20backup%20failed%20-%20update%20aborted"
+        cleanup_old_logs
+        exit 1
+    fi
+    
     # Validate environment
     if ! validate_environment; then
         log_error "Pre-flight checks failed"
+        send_uptimekuma_notification "down" "Pre-flight%20checks%20failed"
         cleanup_old_logs
         exit 1
+    fi
+    
+    # Clone any missing modules FIRST
+    if ! clone_missing_modules; then
+        log_error "Module cloning failed"
+        send_uptimekuma_notification "down" "Module%20cloning%20failed"
+        cleanup_old_logs
+        exit 1
+    fi
+    
+    # Import SQL for new modules
+    if [[ "${GIT_ONLY}" == "false" ]] && [[ "${DRY_RUN}" == "false" ]]; then
+        if ! import_module_sql; then
+            log_warning "SQL import had some issues, continuing..."
+        fi
     fi
     
     # Capture versions before update
@@ -470,15 +751,15 @@ main() {
     # Update core
     if ! update_core; then
         log_error "Core update failed"
-        send_uptimekuma_notification "down" "Core%20update%20failed" ""
+        send_uptimekuma_notification "down" "Core%20update%20failed"
         cleanup_old_logs
         exit 1
     fi
     
-    # Update submodules
-    if ! update_submodules; then
-        log_error "Submodule update failed"
-        send_uptimekuma_notification "down" "Submodule%20update%20failed" ""
+    # Update modules (using force reset method)
+    if ! update_modules; then
+        log_error "Module update failed"
+        send_uptimekuma_notification "down" "Module%20update%20failed"
         cleanup_old_logs
         exit 1
     fi
@@ -500,7 +781,7 @@ main() {
     if [[ "${GIT_ONLY}" == "false" ]]; then
         if ! rebuild_docker; then
             log_error "Docker rebuild failed"
-            send_uptimekuma_notification "down" "Docker%20rebuild%20failed" ""
+            send_uptimekuma_notification "down" "Docker%20rebuild%20failed"
             cleanup_old_logs
             exit 1
         fi
@@ -527,7 +808,7 @@ main() {
     # Cleanup old logs
     cleanup_old_logs
     
-    log_success "All done! 🎉"
+    log_success "All done!"
     exit 0
 }
 
