@@ -108,3 +108,6 @@ local.properties
 # ==================
 .cache
 compile_commands.json
+
+# AzerothCore update script configuration
+.notification-config

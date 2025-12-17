@@ -1,3 +1,7 @@
+# docker-compose.override.yml for AzerothCore.
+#
+# Start the server with `docker compose up -d --build`
+
 services:
   ac-db-import:
     container_name: testing-ac-db-import
@@ -63,8 +67,6 @@ services:
     privileged: true
     environment:
       AC_LOGIN_DATABASE_INFO: "192.168.144.7;3306;root;${DOCKER_DB_ROOT_PASSWORD:-password};acore_auth"
-      AC_AI_PLAYERBOT_ENABLED: 1
-      AC_AI_PLAYERBOT_ENABLE_BROADCASTS: 0
     ports:
       - ${DOCKER_WORLD_EXTERNAL_PORT:-8585}:8585
       - ${DOCKER_SOAP_EXTERNAL_PORT:-8787}:8787
