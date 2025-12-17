@@ -82,16 +82,19 @@ log_header() {
 ################################################################################
 # UTILITY FUNCTIONS
 ################################################################################
-
 convert_ssh_to_https() {
   local url="$1"
   # Convert git@github.com:user/repo.git to https://github.com/user/repo.git
   if [[ "$url" =~ ^git@github\.com:(.*)$ ]]; then
     echo "https://github.com/${BASH_REMATCH[1]}"
+  # Keep local paths as-is (for local repositories)
+  elif [[ "$url" =~ ^/ ]] || [[ "$url" =~ ^file:// ]]; then
+    echo "$url"
   else
     echo "$url"
   fi
 }
+
 
 get_duration() {
   local end_time=$(date +%s)
@@ -302,6 +305,14 @@ clone_missing_modules() {
     return 0
   fi
 
+  # Ensure git allows file protocol for local repositories
+  local current_protocol_setting=$(git config --global --get protocol.file.allow 2>/dev/null || echo "not-set")
+  if [[ "$current_protocol_setting" != "always" ]]; then
+    log_info "Setting git to allow file:// protocol for local repositories..."
+    git config --global protocol.file.allow always
+    log_success "Git file protocol enabled"
+  fi
+
   local cloned_count=0
   local skipped_count=0
 
@@ -331,8 +342,14 @@ clone_missing_modules() {
       current_branch="${current_branch//\"/}" # Remove quotes
     fi
 
-    # When we have all three pieces, check if module exists
-    if [[ -n "$current_path" ]] && [[ -n "$current_url" ]] && [[ -n "$current_branch" ]]; then
+    # When we have path and url (branch is optional), check if module exists
+    if [[ -n "$current_path" ]] && [[ -n "$current_url" ]]; then
+      # If no branch specified, check .gitmodules or default to master
+      if [[ -z "$current_branch" ]]; then
+        current_branch="master"
+        log_info "No branch specified for ${current_path}, defaulting to master"
+      fi
+
       local full_path="${SCRIPT_DIR}/${current_path}"
 
       if [[ ! -d "${full_path}/.git" ]] && [[ ! -f "${full_path}/.git" ]]; then
