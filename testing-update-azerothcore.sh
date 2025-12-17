@@ -12,7 +12,7 @@
 #
 # Author: OpenCode AI Assistant
 # Date: 2025-12-03
-# Version: 1.1.0 (Testing-Playerbot - with auto module cloning)
+# Version: 1.2.0 (Testing-Playerbot - with force reset for submodules)
 ################################################################################
 
 set -euo pipefail # Exit on error, undefined vars, pipe failures
@@ -135,6 +135,10 @@ ${BOLD}BRANCH:${NC}
 ${BOLD}LOGS:${NC}
     Location: ${LOGS_DIR}
     Retention: 90 days
+
+${BOLD}NOTE:${NC}
+    This script will FORCE RESET all modules to match their remote branches,
+    abandoning any local changes or commits. This ensures a clean update.
 
 EOF
   exit 0
@@ -467,10 +471,10 @@ update_core() {
 }
 
 update_modules() {
-  log_header "Updating Modules"
+  log_header "Updating Modules (Force Reset to Remote)"
 
   if [[ "${DRY_RUN}" == "true" ]]; then
-    log_info "[DRY RUN] Would update all modules"
+    log_info "[DRY RUN] Would force reset all modules to remote branches"
     return 0
   fi
 
@@ -486,18 +490,40 @@ update_modules() {
 
       # Get current branch
       local current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "master")
+      log_info "  Branch: ${current_branch}"
 
-      # Fetch and pull updates
-      if git fetch origin "${current_branch}" 2>&1 | tee -a "${LOG_FILE}"; then
-        if git pull origin "${current_branch}" 2>&1 | tee -a "${LOG_FILE}"; then
-          log_success "  ✓ Updated ${module}"
-          ((update_count++))
-        else
-          log_error "  ✗ Failed to pull ${module}"
-          ((error_count++))
-        fi
-      else
+      # Check for local changes and warn user
+      local local_changes=$(git status --porcelain 2>/dev/null || true)
+      if [[ -n "$local_changes" ]]; then
+        log_warning "  Local changes detected - will be discarded:"
+        echo "$local_changes" | head -n 5 | while read line; do
+          log_warning "    $line"
+        done
+      fi
+
+      # Check if ahead of remote
+      local ahead_count=$(git rev-list --count origin/${current_branch}..HEAD 2>/dev/null || echo "0")
+      if [[ "$ahead_count" != "0" ]]; then
+        log_warning "  Branch is ${ahead_count} commit(s) ahead of origin - will be reset"
+      fi
+
+      # Fetch updates
+      if ! git fetch origin "${current_branch}" 2>&1 | tee -a "${LOG_FILE}"; then
         log_error "  ✗ Failed to fetch ${module}"
+        ((error_count++))
+        cd ..
+        continue
+      fi
+
+      # Force reset to remote branch (abandoning local changes)
+      log_info "  Force resetting to origin/${current_branch}..."
+      if git reset --hard "origin/${current_branch}" 2>&1 | tee -a "${LOG_FILE}"; then
+        # Clean any untracked files
+        git clean -fd 2>&1 | tee -a "${LOG_FILE}"
+        log_success "  ✓ Reset ${module} to origin/${current_branch}"
+        ((update_count++))
+      else
+        log_error "  ✗ Failed to reset ${module}"
         ((error_count++))
       fi
 
@@ -583,6 +609,7 @@ main() {
   log_info "Mode: $([ "${GIT_ONLY}" == "true" ] && echo "Git-Only" || echo "Full Update + Rebuild")"
   log_info "Dry Run: $([ "${DRY_RUN}" == "true" ] && echo "Yes" || echo "No")"
   log_info "Log File: ${LOG_FILE}"
+  log_warning "Submodules will be FORCE RESET to remote branches (local changes discarded)"
 
   # Validate environment
   if ! validate_environment; then
