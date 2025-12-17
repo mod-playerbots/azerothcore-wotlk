@@ -1,0 +1,40 @@
+[mysqld]
+# Connection settings
+max_connections = 1000
+max_prepared_stmt_count = 500000
+
+# InnoDB Buffer Pool (critical for performance)
+# Set to ~60-70% of available RAM for dedicated DB operations
+innodb_buffer_pool_size = 320G
+innodb_buffer_pool_instances = 40
+
+# Log files for write performance
+innodb_log_file_size = 2G
+innodb_log_buffer_size = 256M
+
+# Thread and connection handling
+innodb_read_io_threads = 16
+innodb_write_io_threads = 16
+thread_cache_size = 100
+
+# InnoDB optimizations for SSD
+innodb_flush_method = O_DIRECT
+innodb_flush_log_at_trx_commit = 2
+innodb_file_per_table = 1
+
+# Table cache
+table_open_cache = 8192
+table_definition_cache = 4096
+
+# Temporary tables
+tmp_table_size = 1G
+max_heap_table_size = 1G
+
+# Sort and join buffers
+sort_buffer_size = 8M
+read_buffer_size = 4M
+read_rnd_buffer_size = 8M
+join_buffer_size = 8M
+
+# Performance Schema (optional, can disable if not needed)
+performance_schema = ON

@@ -22,3 +22,11 @@
 	path = modules/mod-player-bot-level-brackets
 	url = git@github.com:DustinHendrickson/mod-player-bot-level-brackets.git
 	branch = main
+[submodule "modules/mod-ollama-chat"]
+	path = modules/mod-ollama-chat
+	url = https://github.com/DustinHendrickson/mod-ollama-chat.git
+	branch = main
+[submodule "modules/mod-auto-guild-real-players"]
+	path = modules/mod-auto-guild-real-players
+	url = git@github.com:FullHavocJosh/mod-auto-guild-real-players.git
+	branch = main

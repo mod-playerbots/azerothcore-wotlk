@@ -16,12 +16,46 @@ services:
       - type: volume
         source: ac-database
         target: /var/lib/mysql
+      - ./mysql-custom.cnf:/etc/mysql/conf.d/custom.cnf:ro
     restart: unless-stopped
     healthcheck:
-      test: "/usr/bin/mysql --user=root --password=$$MYSQL_ROOT_PASSWORD --execute \"SHOW DATABASES;\""
+      test: '/usr/bin/mysql --user=root --password=$$MYSQL_ROOT_PASSWORD --execute "SHOW DATABASES;"'
       interval: 5s
       timeout: 10s
       retries: 40
+    deploy:
+      resources:
+        limits:
+          cpus: '20'
+          memory: 350G
+        reservations:
+          cpus: '4'
+          memory: 10G
+
+  # Bot relocation init service - runs before worldserver starts
+  ac-bot-relocate:
+    container_name: testing-ac-bot-relocate
+    image: mysql:8.4
+    networks:
+      - ac-network
+    volumes:
+      - ./relocate_bots_startup.sql:/scripts/relocate_bots.sql:ro
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DOCKER_DB_ROOT_PASSWORD:-password}
+    depends_on:
+      ac-database:
+        condition: service_healthy
+    command: >
+      sh -c "
+        echo 'Waiting for database to be ready...';
+        until mysql -h testing-ac-database -uroot -p$$MYSQL_ROOT_PASSWORD -e 'SELECT 1' > /dev/null 2>&1; do
+          sleep 2;
+        done;
+        echo 'Database is ready. Running bot relocation...';
+        mysql -h testing-ac-database -uroot -p$$MYSQL_ROOT_PASSWORD < /scripts/relocate_bots.sql;
+        echo 'Bot relocation complete!';
+      "
+    restart: "no"
 
   ac-worldserver:
     privileged: true
@@ -30,6 +64,39 @@ services:
       - ${DOCKER_SOAP_EXTERNAL_PORT:-8787}:8787
     volumes:
       - ./modules:/azerothcore/modules:ro
+    depends_on:
+      ac-database:
+        condition: service_healthy
+      ac-client-data-init:
+        condition: service_completed_successfully
+      ac-bot-relocate:
+        condition: service_completed_successfully
+    deploy:
+      resources:
+        limits:
+          cpus: '30'
+          memory: 100G
+        reservations:
+          cpus: '4'
+          memory: 4G
+
+  ac-authserver:
+    depends_on:
+      ac-database:
+        condition: service_healthy
+      ac-client-data-init:
+        condition: service_completed_successfully
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 256M
+
+  ac-client-data-init:
+    container_name: ac-client-data-init
 
   ac-dev-server:
     ports:
