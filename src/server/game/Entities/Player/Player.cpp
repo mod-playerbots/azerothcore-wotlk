@@ -1,14 +1,14 @@
 /*
  * This file is part of the AzerothCore Project. See AUTHORS file for Copyright information
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Affero General Public License as published by the
- * Free Software Foundation; either version 3 of the License, or (at your
- * option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
  * You should have received a copy of the GNU General Public License along
@@ -7193,18 +7193,34 @@ void Player::ApplyItemDependentAuras(Item* item, bool apply)
 {
     if (apply)
     {
-        PlayerSpellMap const& spells = GetSpellMap();
-        for (auto itr = spells.begin(); itr != spells.end(); ++itr)
+        for (auto [spellId, playerSpell]: GetSpellMap())
         {
-            if (itr->second->State == PLAYERSPELL_REMOVED)
+            if (playerSpell->State == PLAYERSPELL_REMOVED)
                 continue;
 
-            SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(itr->first);
+            SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
             if (!spellInfo || !spellInfo->IsPassive() || spellInfo->EquippedItemClass < 0)
                 continue;
 
-            if (!HasAura(itr->first) && HasItemFitToSpellRequirements(spellInfo))
-                AddAura(itr->first, this);  // no SMSG_SPELL_GO in sniff found
+            if (!HasAura(spellId) && HasItemFitToSpellRequirements(spellInfo))
+                AddAura(spellId, this);  // no SMSG_SPELL_GO in sniff found
+        }
+
+        // Check talents (they are stored separately from regular spells)
+        for (auto [spellId, playerTalent] : GetTalentMap())
+        {
+            if (playerTalent->State == PLAYERSPELL_REMOVED)
+                continue;
+
+            if (!(playerTalent->IsInSpec(GetActiveSpec())))
+                continue;
+
+            SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
+            if (!spellInfo || !spellInfo->IsPassive() || spellInfo->EquippedItemClass < 0)
+                continue;
+
+            if (!HasAura(spellId) && HasItemFitToSpellRequirements(spellInfo))
+                AddAura(spellId, this);
         }
     }
     else
@@ -7913,7 +7929,9 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
         // And permit out of range GO with no owner in case fishing hole
         if (!go || (loot_type != LOOT_FISHINGHOLE && ((loot_type != LOOT_FISHING && loot_type != LOOT_FISHING_JUNK) || go->GetOwnerGUID() != GetGUID()) && !go->IsWithinDistInMap(this)) || (loot_type == LOOT_CORPSE && go->GetRespawnTime() && go->isSpawnedByDefault()))
         {
-            go->ForceValuesUpdateAtIndex(GAMEOBJECT_BYTES_1);
+            if (go)
+                go->ForceValuesUpdateAtIndex(GAMEOBJECT_BYTES_1);
+
             SendLootRelease(guid);
             return;
         }
