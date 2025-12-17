@@ -1,6 +1,6 @@
 # docker-compose.override.yml for AzerothCore.
 #
-# Start the server with `docker compose up -d --build`
+# Start the server with 
 
 services:
   ac-db-import:
@@ -37,7 +37,7 @@ services:
           cpus: '4'
           memory: 10G
 
-  # Bot relocation init service - runs before worldserver starts
+  # Bot relocation init service - runs AFTER db-import and before worldserver starts
   ac-bot-relocate:
     container_name: testing-ac-bot-relocate
     image: mysql:8.4
@@ -50,6 +50,8 @@ services:
     depends_on:
       ac-database:
         condition: service_healthy
+      ac-db-import:
+        condition: service_completed_successfully
     command: >
       sh -c "
         echo 'Waiting for database to be ready...';
