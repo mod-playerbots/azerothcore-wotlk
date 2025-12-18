@@ -1,6 +1,6 @@
 # docker-compose.override.yml for AzerothCore.
 #
-# Start the server with 
+# Start the server with `docker compose up -d --build`
 
 services:
   ac-db-import:
