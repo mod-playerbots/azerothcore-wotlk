@@ -4716,82 +4716,82 @@ WHERE level = 56 AND race = 11
 -- LEVEL 57
 -- ============================================================================
 
--- Race 1, Level 57 -> Zone 1377
+-- Race 1, Level 57 -> Zone 4298
 UPDATE characters
-SET position_x = -7181.67, position_y = 1653.26, position_z = 4.48,
-    map = 1, zone = 1377, orientation = 0
+SET position_x = 2355.05, position_y = -5661.7, position_z = 426.03,
+    map = 609, zone = 4298, orientation = 0
 WHERE level = 57 AND race = 1
   AND guid IN (SELECT DISTINCT bot FROM acore_playerbots.playerbots_random_bots WHERE bot > 0);
 
 
--- Race 2, Level 57 -> Zone 1377
+-- Race 2, Level 57 -> Zone 4298
 UPDATE characters
-SET position_x = -7181.67, position_y = 1653.26, position_z = 4.48,
-    map = 1, zone = 1377, orientation = 0
+SET position_x = 2355.05, position_y = -5661.7, position_z = 426.03,
+    map = 609, zone = 4298, orientation = 0
 WHERE level = 57 AND race = 2
   AND guid IN (SELECT DISTINCT bot FROM acore_playerbots.playerbots_random_bots WHERE bot > 0);
 
 
--- Race 3, Level 57 -> Zone 1377
+-- Race 3, Level 57 -> Zone 4298
 UPDATE characters
-SET position_x = -7181.67, position_y = 1653.26, position_z = 4.48,
-    map = 1, zone = 1377, orientation = 0
+SET position_x = 2355.05, position_y = -5661.7, position_z = 426.03,
+    map = 609, zone = 4298, orientation = 0
 WHERE level = 57 AND race = 3
   AND guid IN (SELECT DISTINCT bot FROM acore_playerbots.playerbots_random_bots WHERE bot > 0);
 
 
--- Race 4, Level 57 -> Zone 1377
+-- Race 4, Level 57 -> Zone 4298
 UPDATE characters
-SET position_x = -7181.67, position_y = 1653.26, position_z = 4.48,
-    map = 1, zone = 1377, orientation = 0
+SET position_x = 2355.05, position_y = -5661.7, position_z = 426.03,
+    map = 609, zone = 4298, orientation = 0
 WHERE level = 57 AND race = 4
   AND guid IN (SELECT DISTINCT bot FROM acore_playerbots.playerbots_random_bots WHERE bot > 0);
 
 
--- Race 5, Level 57 -> Zone 1377
+-- Race 5, Level 57 -> Zone 4298
 UPDATE characters
-SET position_x = -7181.67, position_y = 1653.26, position_z = 4.48,
-    map = 1, zone = 1377, orientation = 0
+SET position_x = 2355.05, position_y = -5661.7, position_z = 426.03,
+    map = 609, zone = 4298, orientation = 0
 WHERE level = 57 AND race = 5
   AND guid IN (SELECT DISTINCT bot FROM acore_playerbots.playerbots_random_bots WHERE bot > 0);
 
 
--- Race 6, Level 57 -> Zone 1377
+-- Race 6, Level 57 -> Zone 4298
 UPDATE characters
-SET position_x = -7181.67, position_y = 1653.26, position_z = 4.48,
-    map = 1, zone = 1377, orientation = 0
+SET position_x = 2355.05, position_y = -5661.7, position_z = 426.03,
+    map = 609, zone = 4298, orientation = 0
 WHERE level = 57 AND race = 6
   AND guid IN (SELECT DISTINCT bot FROM acore_playerbots.playerbots_random_bots WHERE bot > 0);
 
 
--- Race 7, Level 57 -> Zone 1377
+-- Race 7, Level 57 -> Zone 4298
 UPDATE characters
-SET position_x = -7181.67, position_y = 1653.26, position_z = 4.48,
-    map = 1, zone = 1377, orientation = 0
+SET position_x = 2355.05, position_y = -5661.7, position_z = 426.03,
+    map = 609, zone = 4298, orientation = 0
 WHERE level = 57 AND race = 7
   AND guid IN (SELECT DISTINCT bot FROM acore_playerbots.playerbots_random_bots WHERE bot > 0);
 
 
--- Race 8, Level 57 -> Zone 1377
+-- Race 8, Level 57 -> Zone 4298
 UPDATE characters
-SET position_x = -7181.67, position_y = 1653.26, position_z = 4.48,
-    map = 1, zone = 1377, orientation = 0
+SET position_x = 2355.05, position_y = -5661.7, position_z = 426.03,
+    map = 609, zone = 4298, orientation = 0
 WHERE level = 57 AND race = 8
   AND guid IN (SELECT DISTINCT bot FROM acore_playerbots.playerbots_random_bots WHERE bot > 0);
 
 
--- Race 10, Level 57 -> Zone 1377
+-- Race 10, Level 57 -> Zone 4298
 UPDATE characters
-SET position_x = -7181.67, position_y = 1653.26, position_z = 4.48,
-    map = 1, zone = 1377, orientation = 0
+SET position_x = 2355.05, position_y = -5661.7, position_z = 426.03,
+    map = 609, zone = 4298, orientation = 0
 WHERE level = 57 AND race = 10
   AND guid IN (SELECT DISTINCT bot FROM acore_playerbots.playerbots_random_bots WHERE bot > 0);
 
 
--- Race 11, Level 57 -> Zone 1377
+-- Race 11, Level 57 -> Zone 4298
 UPDATE characters
-SET position_x = -7181.67, position_y = 1653.26, position_z = 4.48,
-    map = 1, zone = 1377, orientation = 0
+SET position_x = 2355.05, position_y = -5661.7, position_z = 426.03,
+    map = 609, zone = 4298, orientation = 0
 WHERE level = 57 AND race = 11
   AND guid IN (SELECT DISTINCT bot FROM acore_playerbots.playerbots_random_bots WHERE bot > 0);
 
@@ -4800,82 +4800,82 @@ WHERE level = 57 AND race = 11
 -- LEVEL 58
 -- ============================================================================
 
--- Race 1, Level 58 -> Zone 1377
+-- Race 1, Level 58 -> Zone 4298
 UPDATE characters
-SET position_x = -7181.67, position_y = 1653.26, position_z = 4.48,
-    map = 1, zone = 1377, orientation = 0
+SET position_x = 2355.05, position_y = -5661.7, position_z = 426.03,
+    map = 609, zone = 4298, orientation = 0
 WHERE level = 58 AND race = 1
   AND guid IN (SELECT DISTINCT bot FROM acore_playerbots.playerbots_random_bots WHERE bot > 0);
 
 
--- Race 2, Level 58 -> Zone 1377
+-- Race 2, Level 58 -> Zone 4298
 UPDATE characters
-SET position_x = -7181.67, position_y = 1653.26, position_z = 4.48,
-    map = 1, zone = 1377, orientation = 0
+SET position_x = 2355.05, position_y = -5661.7, position_z = 426.03,
+    map = 609, zone = 4298, orientation = 0
 WHERE level = 58 AND race = 2
   AND guid IN (SELECT DISTINCT bot FROM acore_playerbots.playerbots_random_bots WHERE bot > 0);
 
 
--- Race 3, Level 58 -> Zone 1377
+-- Race 3, Level 58 -> Zone 4298
 UPDATE characters
-SET position_x = -7181.67, position_y = 1653.26, position_z = 4.48,
-    map = 1, zone = 1377, orientation = 0
+SET position_x = 2355.05, position_y = -5661.7, position_z = 426.03,
+    map = 609, zone = 4298, orientation = 0
 WHERE level = 58 AND race = 3
   AND guid IN (SELECT DISTINCT bot FROM acore_playerbots.playerbots_random_bots WHERE bot > 0);
 
 
--- Race 4, Level 58 -> Zone 1377
+-- Race 4, Level 58 -> Zone 4298
 UPDATE characters
-SET position_x = -7181.67, position_y = 1653.26, position_z = 4.48,
-    map = 1, zone = 1377, orientation = 0
+SET position_x = 2355.05, position_y = -5661.7, position_z = 426.03,
+    map = 609, zone = 4298, orientation = 0
 WHERE level = 58 AND race = 4
   AND guid IN (SELECT DISTINCT bot FROM acore_playerbots.playerbots_random_bots WHERE bot > 0);
 
 
--- Race 5, Level 58 -> Zone 1377
+-- Race 5, Level 58 -> Zone 4298
 UPDATE characters
-SET position_x = -7181.67, position_y = 1653.26, position_z = 4.48,
-    map = 1, zone = 1377, orientation = 0
+SET position_x = 2355.05, position_y = -5661.7, position_z = 426.03,
+    map = 609, zone = 4298, orientation = 0
 WHERE level = 58 AND race = 5
   AND guid IN (SELECT DISTINCT bot FROM acore_playerbots.playerbots_random_bots WHERE bot > 0);
 
 
--- Race 6, Level 58 -> Zone 1377
+-- Race 6, Level 58 -> Zone 4298
 UPDATE characters
-SET position_x = -7181.67, position_y = 1653.26, position_z = 4.48,
-    map = 1, zone = 1377, orientation = 0
+SET position_x = 2355.05, position_y = -5661.7, position_z = 426.03,
+    map = 609, zone = 4298, orientation = 0
 WHERE level = 58 AND race = 6
   AND guid IN (SELECT DISTINCT bot FROM acore_playerbots.playerbots_random_bots WHERE bot > 0);
 
 
--- Race 7, Level 58 -> Zone 1377
+-- Race 7, Level 58 -> Zone 4298
 UPDATE characters
-SET position_x = -7181.67, position_y = 1653.26, position_z = 4.48,
-    map = 1, zone = 1377, orientation = 0
+SET position_x = 2355.05, position_y = -5661.7, position_z = 426.03,
+    map = 609, zone = 4298, orientation = 0
 WHERE level = 58 AND race = 7
   AND guid IN (SELECT DISTINCT bot FROM acore_playerbots.playerbots_random_bots WHERE bot > 0);
 
 
--- Race 8, Level 58 -> Zone 1377
+-- Race 8, Level 58 -> Zone 4298
 UPDATE characters
-SET position_x = -7181.67, position_y = 1653.26, position_z = 4.48,
-    map = 1, zone = 1377, orientation = 0
+SET position_x = 2355.05, position_y = -5661.7, position_z = 426.03,
+    map = 609, zone = 4298, orientation = 0
 WHERE level = 58 AND race = 8
   AND guid IN (SELECT DISTINCT bot FROM acore_playerbots.playerbots_random_bots WHERE bot > 0);
 
 
--- Race 10, Level 58 -> Zone 1377
+-- Race 10, Level 58 -> Zone 4298
 UPDATE characters
-SET position_x = -7181.67, position_y = 1653.26, position_z = 4.48,
-    map = 1, zone = 1377, orientation = 0
+SET position_x = 2355.05, position_y = -5661.7, position_z = 426.03,
+    map = 609, zone = 4298, orientation = 0
 WHERE level = 58 AND race = 10
   AND guid IN (SELECT DISTINCT bot FROM acore_playerbots.playerbots_random_bots WHERE bot > 0);
 
 
--- Race 11, Level 58 -> Zone 1377
+-- Race 11, Level 58 -> Zone 4298
 UPDATE characters
-SET position_x = -7181.67, position_y = 1653.26, position_z = 4.48,
-    map = 1, zone = 1377, orientation = 0
+SET position_x = 2355.05, position_y = -5661.7, position_z = 426.03,
+    map = 609, zone = 4298, orientation = 0
 WHERE level = 58 AND race = 11
   AND guid IN (SELECT DISTINCT bot FROM acore_playerbots.playerbots_random_bots WHERE bot > 0);
 

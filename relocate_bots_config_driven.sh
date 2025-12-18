@@ -124,6 +124,7 @@ ZONE_DATA[3520]="530:-3881.34:2150.38:4.53"   # Shadowmoon Valley
 ZONE_DATA[3521]="530:254.93:7862.00:22.44"    # Zangarmarsh
 ZONE_DATA[3522]="530:2029.75:4425.37:156.97"  # Blade's Edge Mountains
 ZONE_DATA[3523]="530:3087.22:3681.85:143.20"  # Netherstorm
+ZONE_DATA[3540]="530:2029.75:4425.37:156.97"  # Shadowmoon Valley (subzone)
 ZONE_DATA[4080]="530:12806.50:-6911.40:41.11" # Isle of Quel'Danas
 ZONE_DATA[3703]="530:-1838.16:5301.79:-12.43" # Shattrath City
 
@@ -138,6 +139,7 @@ ZONE_DATA[394]="571:4017.75:-3404.17:290.00" # Grizzly Hills
 ZONE_DATA[3711]="571:5614.67:5818.34:-74.78" # Sholazar Basin
 ZONE_DATA[2817]="571:5722.14:1016.23:175.63" # Crystalsong Forest
 ZONE_DATA[4197]="571:5132.66:2840.52:408.5"  # Wintergrasp
+ZONE_DATA[4298]="609:2355.05:-5661.7:426.03"  # Ebon Hold (DK start)
 ZONE_DATA[4395]="571:5804.15:624.77:647.77"  # Dalaran
 
 # Race to faction mapping
