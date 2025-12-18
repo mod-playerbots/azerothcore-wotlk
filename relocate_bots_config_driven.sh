@@ -177,12 +177,24 @@ ALLIANCE_ZONES[3525]=1 # Bloodmyst Isle
 ALLIANCE_ZONES[11]=1   # Wetlands
 ALLIANCE_ZONES[44]=1   # Redridge Mountains
 
+# Alliance Capital Cities
+ALLIANCE_ZONES[1519]=1  # Stormwind City
+ALLIANCE_ZONES[1537]=1  # Ironforge
+ALLIANCE_ZONES[1657]=1  # Darnassus
+ALLIANCE_ZONES[3557]=1  # The Exodar
+
 declare -A HORDE_ZONES
 HORDE_ZONES[17]=1   # Barrens
 HORDE_ZONES[331]=1  # Ashenvale
 HORDE_ZONES[130]=1  # Silverpine Forest
 HORDE_ZONES[3433]=1 # Ghostlands
 HORDE_ZONES[267]=1  # Hillsbrad Foothills
+
+# Horde Capital Cities
+HORDE_ZONES[1497]=1     # Undercity
+HORDE_ZONES[1637]=1     # Orgrimmar
+HORDE_ZONES[1638]=1     # Thunder Bluff
+HORDE_ZONES[3487]=1     # Silvermoon City
 
 # Function to select best zone for race/level
 select_zone_for_bot() {
