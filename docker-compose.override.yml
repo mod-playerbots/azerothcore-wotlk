@@ -34,7 +34,7 @@ services:
 
   # Bot relocation init service - runs AFTER db-import and before worldserver starts
   ac-bot-relocate:
-    container_name: testing-ac-bot-relocate
+    container_name: ac-bot-relocate
     image: mysql:8.4
     networks:
       - ac-network
@@ -50,11 +50,11 @@ services:
     command: >
       sh -c "
         echo 'Waiting for database to be ready...';
-        until mysql -h testing-ac-database -uroot -p$$MYSQL_ROOT_PASSWORD -e 'SELECT 1' > /dev/null 2>&1; do
+        until mysql -h ac-database -uroot -p$$MYSQL_ROOT_PASSWORD -e 'SELECT 1' > /dev/null 2>&1; do
           sleep 2;
         done;
         echo 'Database is ready. Running bot relocation...';
-        mysql -h testing-ac-database -uroot -p$$MYSQL_ROOT_PASSWORD < /scripts/relocate_bots.sql;
+        mysql -h ac-database -uroot -p$$MYSQL_ROOT_PASSWORD < /scripts/relocate_bots.sql;
         echo 'Bot relocation complete!';
       "
     restart: "no"
