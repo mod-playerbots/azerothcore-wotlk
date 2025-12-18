@@ -106,6 +106,16 @@ ZONE_DATA[490]="1:-6291.55:-1158.62:-258.17" # Un'Goro Crater
 ZONE_DATA[618]="1:6726.54:-4645.06:720.80"   # Winterspring
 ZONE_DATA[1377]="1:-7181.67:1653.26:4.48"    # Silithus
 
+# Capital Cities
+ZONE_DATA[1497]="0:1582.13:246.26:-54.77"        # Undercity
+ZONE_DATA[1519]="0:-8867.13:566.31:101.8"        # Stormwind City
+ZONE_DATA[1537]="0:-4869.19:-1052.61:502.87"     # Ironforge
+ZONE_DATA[1637]="1:1646.61:-4349.95:26.8"        # Orgrimmar
+ZONE_DATA[1638]="1:-1210.74:3.98:147.1"          # Thunder Bluff
+ZONE_DATA[1657]="1:9968.73:2459.63:1323.81"      # Darnassus
+ZONE_DATA[3487]="530:9674.32:-7349.3:15.24"      # Silvermoon City
+ZONE_DATA[3557]="530:-3919.11:-11628.83:-108.86" # The Exodar
+
 # TBC Zones
 ZONE_DATA[3483]="530:-360.67:3071.92:-15.10"  # Hellfire Peninsula
 ZONE_DATA[3518]="530:-1769.32:7152.56:-10.30" # Nagrand
