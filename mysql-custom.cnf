@@ -38,3 +38,28 @@ join_buffer_size = 8M
 
 # Performance Schema (optional, can disable if not needed)
 performance_schema = ON
+
+# ===== DEADLOCK MITIGATION SETTINGS =====
+# Increase lock wait timeout to give queries more time before failing
+innodb_lock_wait_timeout = 120
+
+# Enable deadlock detection (already on, but explicit)
+innodb_deadlock_detect = ON
+
+# Print all deadlocks to error log for debugging
+innodb_print_all_deadlocks = ON
+
+# Reduce lock contention with larger transaction isolation
+# Note: Keep default READ-COMMITTED for AzerothCore compatibility
+# transaction_isolation = READ-COMMITTED
+
+# Increase concurrent transactions handling
+innodb_thread_concurrency = 0
+
+# Optimize INSERT buffer for bulk operations
+innodb_change_buffering = all
+innodb_change_buffer_max_size = 50
+
+# Reduce page locking contention
+innodb_adaptive_hash_index = ON
+innodb_adaptive_hash_index_parts = 16
