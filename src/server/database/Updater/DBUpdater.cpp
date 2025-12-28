@@ -200,7 +200,7 @@ std::string DBUpdater<PlayerbotsDatabaseConnection>::GetSourceDirectory()
 template<>
 std::string DBUpdater<PlayerbotsDatabaseConnection>::GetBaseFilesDirectory()
 {
-    return DBUpdater<PlayerbotsDatabaseConnection>::GetSourceDirectory() + "/data/sql/playerbots/base/";
+    return DBUpdater<PlayerbotsDatabaseConnection>::GetSourceDirectory() + "/data/sql/base/db_playerbots/";
 }
 
 template<>
@@ -213,7 +213,7 @@ bool DBUpdater<PlayerbotsDatabaseConnection>::IsEnabled(uint32 const updateMask)
 template<>
 std::string DBUpdater<PlayerbotsDatabaseConnection>::GetDBModuleName()
 {
-    return "db_playerbot";
+    return "playerbots";
 }
 #endif
 
