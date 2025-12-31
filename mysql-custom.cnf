@@ -63,3 +63,14 @@ innodb_change_buffer_max_size = 50
 # Reduce page locking contention
 innodb_adaptive_hash_index = ON
 innodb_adaptive_hash_index_parts = 16
+
+# ===== ADDITIONAL DEADLOCK OPTIMIZATIONS (Added 2025-12-31) =====
+# Reduce transaction isolation level to minimize locking
+# This is safe for AzerothCore and reduces deadlock probability
+transaction_isolation = READ-COMMITTED
+
+# Increase row lock wait queue
+innodb_sync_array_size = 8
+
+# Optimize locking for concurrent pet operations (safe for InnoDB)
+innodb_autoinc_lock_mode = 2
