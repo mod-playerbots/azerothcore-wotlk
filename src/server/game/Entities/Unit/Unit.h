@@ -2051,8 +2051,6 @@ public:
     // Debug
     void OutDebugInfo() const;
     std::string GetDebugInfo() const override;
-    void SetCannotReachTargetUnit(bool target, bool isChase);
-    [[nodiscard]] bool CanNotReachTarget() const;
 
     bool m_cannotReachTarget;
 

@@ -1864,7 +1864,7 @@ void Unit::DealMeleeDamage(CalcDamageInfo* damageInfo, bool durabilityLoss)
 
     auto canTakeMeleeDamage = [&]()
     {
-        return victim->IsAlive() && !victim->HasUnitState(UNIT_STATE_IN_FLIGHT) && (!victim->IsCreature() || !victim->ToCreature()->IsEvadingAttacks());
+        return victim->IsAlive() && !victim->IsInFlight() && (!victim->IsCreature() || !victim->ToCreature()->IsEvadingAttacks());
     };
 
     if (!canTakeMeleeDamage())
@@ -1956,10 +1956,11 @@ void Unit::DealMeleeDamage(CalcDamageInfo* damageInfo, bool durabilityLoss)
             Probability = 0.65f * victim->GetLevel() + 0.5f;
 
         uint32 VictimDefense = victim->GetDefenseSkillValue();
+        uint32 VictimAuraDefense = -victim->GetTotalAuraModifier(SPELL_AURA_MOD_ATTACKER_MELEE_CRIT_CHANCE) * 25;
         uint32 AttackerMeleeSkill = GetUnitMeleeSkill();
 
         // xinef: fix daze mechanics
-        Probability -= ((float)VictimDefense - AttackerMeleeSkill) * 0.1428f;
+        Probability -= ((float)VictimDefense + (float)VictimAuraDefense - AttackerMeleeSkill) * 0.1428f;
 
         if (Probability > 40.0f)
             Probability = 40.0f;
@@ -14716,7 +14717,7 @@ void Unit::setDeathState(DeathState s, bool despawn)
     }
     else if (s == DeathState::JustRespawned)
     {
-        RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_SKINNABLE); // clear skinnable for creature and player (at battleground)
+        RemoveFlag (UNIT_FIELD_FLAGS, UNIT_FLAG_SKINNABLE); // clear skinnable for creature and player (at battleground)
     }
 }
 
@@ -18429,10 +18430,8 @@ void Unit::SetControlled(bool apply, UnitState state, Unit* source /*= nullptr*/
 
 void Unit::SetStunned(bool apply)
 {
-    if (HasUnitState(UNIT_STATE_IN_FLIGHT))
-    {
+    if (IsInFlight())
         return;
-    }
 
     if (apply)
     {
@@ -21519,19 +21518,4 @@ Player const* Unit::GetClientControlling() const
         }
     }
     return nullptr;
-}
-
-void Unit::SetCannotReachTargetUnit(bool cannotReach, bool isChase)
-{
-    if (cannotReach == m_cannotReachTarget)
-    {
-        return;
-    }
-
-    m_cannotReachTarget = cannotReach;
-}
-
-bool Unit::CanNotReachTarget() const
-{
-    return m_cannotReachTarget;
 }
