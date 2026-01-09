@@ -2052,8 +2052,6 @@ public:
     void OutDebugInfo() const;
     std::string GetDebugInfo() const override;
 
-    bool m_cannotReachTarget;
-
     //----------- Public variables ----------//
     uint32 m_extraAttacks;
     DualWieldMode _dualWieldMode;
