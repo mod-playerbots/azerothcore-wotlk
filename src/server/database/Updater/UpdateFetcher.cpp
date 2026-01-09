@@ -162,9 +162,16 @@ UpdateFetcher::DirectoryStorage UpdateFetcher::ReceiveIncludedDirectories() cons
         // data/sql
         for (auto const& itr : moduleList)
         {
-            std::string path = _sourceDirectory->generic_string() + "/modules/" + itr + "/data/sql/" + _dbModuleName; // modules/mod-name/data/sql/db-world
-
-            Path const p(path);
+            Path p;
+            
+            std::string path = _sourceDirectory->generic_string() + "/modules/" + itr + "/data/sql/" + _dbModuleName;
+            p = Path(path);
+        
+            if (!is_directory(p))
+            {
+                path = _sourceDirectory->generic_string() + "/modules/" + itr + "/data/sql/db-" + _dbModuleName;
+                p = Path(path);
+            }
             if (!is_directory(p))
                 continue;
 
