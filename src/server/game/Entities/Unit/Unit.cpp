@@ -596,7 +596,7 @@ void Unit::UpdateSplineMovement(uint32 t_diff)
         DisableSpline();
 
         if (movespline->HasAnimation() && IsCreature() && IsAlive())
-            SetByteValue(UNIT_FIELD_BYTES_1, UNIT_BYTES_1_OFFSET_ANIM_TIER, movespline->GetAnimationType());
+            SetAnimTier(AnimTier(movespline->GetAnimationType()));
     }
 
     // pussywizard: update always! not every 400ms, because movement generators need the actual position
@@ -1864,7 +1864,7 @@ void Unit::DealMeleeDamage(CalcDamageInfo* damageInfo, bool durabilityLoss)
 
     auto canTakeMeleeDamage = [&]()
     {
-        return victim->IsAlive() && !victim->HasUnitState(UNIT_STATE_IN_FLIGHT) && (!victim->IsCreature() || !victim->ToCreature()->IsEvadingAttacks());
+        return victim->IsAlive() && !victim->IsInFlight() && (!victim->IsCreature() || !victim->ToCreature()->IsEvadingAttacks());
     };
 
     if (!canTakeMeleeDamage())
@@ -1956,10 +1956,11 @@ void Unit::DealMeleeDamage(CalcDamageInfo* damageInfo, bool durabilityLoss)
             Probability = 0.65f * victim->GetLevel() + 0.5f;
 
         uint32 VictimDefense = victim->GetDefenseSkillValue();
+        uint32 VictimAuraDefense = -victim->GetTotalAuraModifier(SPELL_AURA_MOD_ATTACKER_MELEE_CRIT_CHANCE) * 25;
         uint32 AttackerMeleeSkill = GetUnitMeleeSkill();
 
         // xinef: fix daze mechanics
-        Probability -= ((float)VictimDefense - AttackerMeleeSkill) * 0.1428f;
+        Probability -= ((float)VictimDefense + (float)VictimAuraDefense - AttackerMeleeSkill) * 0.1428f;
 
         if (Probability > 40.0f)
             Probability = 40.0f;
@@ -3976,6 +3977,10 @@ void Unit::_UpdateAutoRepeatSpell()
 
         // Reset attack
         resetAttackTimer(RANGED_ATTACK);
+
+        // Blizzlike: Reset melee swing timers when performing ranged attack
+        resetAttackTimer(BASE_ATTACK);
+        resetAttackTimer(OFF_ATTACK);
     }
 }
 
@@ -15289,6 +15294,11 @@ float Unit::GetSpellMinRangeForTarget(Unit const* target, SpellInfo const* spell
     return spellInfo->GetMinRange(!IsHostileTo(target));
 }
 
+void Unit::SetAnimTier(AnimTier animTier)
+{
+    SetByteValue(UNIT_FIELD_BYTES_1, UNIT_BYTES_1_OFFSET_ANIM_TIER, uint8(animTier));
+}
+
 uint32 Unit::GetCreatureType() const
 {
     if (IsPlayer())
@@ -18420,10 +18430,8 @@ void Unit::SetControlled(bool apply, UnitState state, Unit* source /*= nullptr*/
 
 void Unit::SetStunned(bool apply)
 {
-    if (HasUnitState(UNIT_STATE_IN_FLIGHT))
-    {
+    if (IsInFlight())
         return;
-    }
 
     if (apply)
     {
@@ -20974,7 +20982,7 @@ void Unit::PatchValuesUpdate(ByteBuffer& valuesUpdateBuf, BuildValuesCachePosPoi
             appendValue &= ~UNIT_NPC_FLAG_VENDOR_MASK;
         }
 
-        if (!creature->IsValidTrainerForPlayer(target, &appendValue))
+        if (!target->CanSeeTrainer(creature))
             appendValue &= ~UNIT_NPC_FLAG_TRAINER;
 
         valuesUpdateBuf.put(posPointers.UnitNPCFlagsPos, appendValue);
@@ -21510,19 +21518,4 @@ Player const* Unit::GetClientControlling() const
         }
     }
     return nullptr;
-}
-
-void Unit::SetCannotReachTargetUnit(bool cannotReach, bool isChase)
-{
-    if (cannotReach == m_cannotReachTarget)
-    {
-        return;
-    }
-
-    m_cannotReachTarget = cannotReach;
-}
-
-bool Unit::CanNotReachTarget() const
-{
-    return m_cannotReachTarget;
 }

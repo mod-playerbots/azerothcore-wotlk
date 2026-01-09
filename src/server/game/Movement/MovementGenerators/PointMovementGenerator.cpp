@@ -47,10 +47,6 @@ void PointMovementGenerator<T>::DoInitialize(T* unit)
 
     i_recalculateSpeed = false;
     Movement::MoveSplineInit init(unit);
-    /// Added by mod-playerbots
-    if (_reverseOrientation)
-        init.SetOrientationInversed();
-    /// End added
     if (m_precomputedPath.size() > 2) // pussywizard: for charge
         init.MovebyPath(m_precomputedPath);
     else if (_generatePath)
@@ -97,6 +93,9 @@ void PointMovementGenerator<T>::DoInitialize(T* unit)
     {
         init.SetFacing(i_orientation);
     }
+
+    if (_animTier)
+        init.SetAnimation(*_animTier);
 
     init.Launch();
 }
@@ -156,6 +155,9 @@ bool PointMovementGenerator<T>::DoUpdate(T* unit, uint32 /*diff*/)
         else if (_forcedMovement == FORCED_MOVEMENT_RUN)
             init.SetWalk(false);
 
+        if (_animTier)
+            init.SetAnimation(*_animTier);
+
         if (i_orientation > 0.0f)
         {
             init.SetFacing(i_orientation);
@@ -214,9 +216,14 @@ template <> void PointMovementGenerator<Creature>::MovementInform(Creature* unit
     if (Unit* summoner = unit->GetCharmerOrOwner())
     {
         if (UnitAI* AI = summoner->GetAI())
-        {
             AI->SummonMovementInform(unit, POINT_MOTION_TYPE, id);
-        }
+    }
+    else
+    {
+        if (TempSummon* tempSummon = unit->ToTempSummon())
+            if (Unit* summoner = tempSummon->GetSummonerUnit())
+                if (UnitAI* AI = summoner->GetAI())
+                    AI->SummonMovementInform(unit, POINT_MOTION_TYPE, id);
     }
 }
 
