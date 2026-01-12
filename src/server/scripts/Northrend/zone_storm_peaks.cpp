@@ -31,6 +31,7 @@
 enum qSniffingOutThePerpetrator
 {
     NPC_FROSTHOUND                          = 29677,
+    NPC_FROSTBITE                           = 29903,
     SPELL_SUMMON_PURSUERS_PERIODIC          = 54993,
     SPELL_SNIFFING_CREDIT                   = 55477,
     TALK_EMOTE_FROSTHOUND_SNIFF             = 0,
@@ -41,7 +42,7 @@ enum qSniffingOutThePerpetrator
 
 struct npc_frosthound : public npc_escortAI
 {
-    explicit npc_frosthound(Creature* creature) : npc_escortAI(creature), _summons(creature) {}
+    explicit npc_frosthound(Creature* creature) : npc_escortAI(creature), _summons(creature), _completionWaypoint((creature->GetEntry() == NPC_FROSTBITE) ? 19 : 34) { }
 
     void AttackStart(Unit* /*who*/) override {}
     void JustEngagedWith(Unit* /*who*/) override {}
@@ -77,20 +78,15 @@ struct npc_frosthound : public npc_escortAI
         if (!player)
             return;
 
-        switch (waypointId)
+        if (waypointId == 0)
+            Talk(TALK_SEEN, player);
+        else if (waypointId == _completionWaypoint)
         {
-            case 0:
-                Talk(TALK_SEEN, player);
-                break;
-            case 34:
-                Talk(TALK_EMOTE_TRACKED_COMPLETE, me);
-                Talk(TALK_CONFRONT, player);
-                if (Unit* summoner = me->ToTempSummon()->GetSummonerUnit())
-                    summoner->ToPlayer()->KilledMonsterCredit(NPC_FROSTHOUND);
-                _summons.DespawnAll();
-                break;
-            default:
-                break;
+            Talk(TALK_EMOTE_TRACKED_COMPLETE, me);
+            Talk(TALK_CONFRONT, player);
+            if (Unit* summoner = me->ToTempSummon()->GetSummonerUnit())
+                summoner->ToPlayer()->KilledMonsterCredit(NPC_FROSTHOUND); // same credit for Alliance and Horde
+            _summons.DespawnAll();
         }
     }
 
@@ -112,6 +108,7 @@ struct npc_frosthound : public npc_escortAI
 
 private:
     SummonList _summons;
+    uint32 _completionWaypoint;
 };
 
 enum eIronWatcher
@@ -415,7 +412,7 @@ public:
         switch (action)
         {
             case GOSSIP_ACTION_TRAIN:
-                player->GetSession()->SendTrainerList(creature->GetGUID());
+                player->GetSession()->SendTrainerList(creature);
                 break;
             case GOSSIP_ACTION_TRADE:
                 player->GetSession()->SendListInventory(creature->GetGUID());
