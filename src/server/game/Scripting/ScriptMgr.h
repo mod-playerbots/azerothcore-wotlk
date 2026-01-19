@@ -174,8 +174,8 @@ public: /* SpellScriptLoader */
 public: /* ServerScript */
     void OnNetworkStart();
     void OnNetworkStop();
-    void OnSocketOpen(std::shared_ptr<WorldSocket> socket);
-    void OnSocketClose(std::shared_ptr<WorldSocket> socket);
+    void OnSocketOpen(std::shared_ptr<WorldSocket> const& socket);
+    void OnSocketClose(std::shared_ptr<WorldSocket> const& socket);
     bool CanPacketReceive(WorldSession* session, WorldPacket const& packet);
     void OnPacketReceived(WorldSession* session, WorldPacket const& packet);
     bool CanPacketSend(WorldSession* session, WorldPacket const& packet);
