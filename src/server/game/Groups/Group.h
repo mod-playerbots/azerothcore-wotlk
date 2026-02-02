@@ -262,6 +262,7 @@ public:
     void SetGroupMemberFlag(ObjectGuid guid, bool apply, GroupMemberFlags flag);
     void RemoveUniqueGroupMemberFlag(GroupMemberFlags flag);
 
+    //mod_playerbots
     ObjectGuid const GetTargetIcon(uint8 id) const { return m_targetIcons[id]; }
 
     Difficulty GetDifficulty(bool isRaid) const;
