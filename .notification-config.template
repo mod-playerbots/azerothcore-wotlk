@@ -1,0 +1,103 @@
+################################################################################
+# AzerothCore Update Script - Notification Configuration
+#
+# SETUP INSTRUCTIONS:
+# 1. Copy this file: cp .notification-config.template .notification-config
+# 2. Edit .notification-config and fill in your Uptime Kuma push URL
+# 3. The .notification-config file is git-ignored for security
+#
+# UPTIME KUMA SETUP:
+# See UPTIMEKUMA-SETUP.md for detailed instructions on:
+# - Creating a push monitor in Uptime Kuma
+# - Getting your push URL
+# - Configuring Discord notifications in Uptime Kuma
+################################################################################
+
+# Enable/Disable Uptime Kuma notifications
+ENABLE_UPTIMEKUMA=true
+
+# Uptime Kuma Push Monitor URL
+# 
+# Format: http://YOUR_KUMA_IP:3001/api/push/YOUR_PUSH_KEY
+#
+# To get your push URL:
+# 1. Log in to Uptime Kuma: http://192.168.144.3:3001
+# 2. Click "Add New Monitor"
+# 3. Choose "Push" as the monitor type
+# 4. Name it: "AzerothCore Auto-Update"
+# 5. Set Heartbeat Interval: 24 hours
+# 6. Save the monitor
+# 7. Copy the push URL shown (it will look like the format above)
+# 8. Paste it below (remove the ?status=up&msg=OK&ping= part, script adds it)
+#
+# Example:
+# UPTIMEKUMA_PUSH_URL="http://192.168.144.3:3001/api/push/YOUR_PUSH_KEY_HERE"
+#
+UPTIMEKUMA_PUSH_URL="CHANGE_ME_TO_YOUR_PUSH_URL"
+
+################################################################################
+# NOTIFICATION FLOW
+################################################################################
+# 
+# Script → Uptime Kuma → Discord
+#
+# This script sends status updates to Uptime Kuma using the push monitor.
+# Uptime Kuma then forwards notifications to Discord (configure in Uptime Kuma).
+#
+# Benefits:
+# - Centralized notification management
+# - Monitor heartbeats (knows if script didn't run)
+# - Historical status tracking
+# - Can add additional notification channels in Uptime Kuma
+#
+################################################################################
+
+################################################################################
+# NOTIFICATION MESSAGES
+################################################################################
+#
+# The script sends these status updates to Uptime Kuma:
+#
+# SUCCESS (status=up):
+#   - "Update completed (Full) - X repos updated"
+#   - "Update completed (Git-only) - X repos updated"
+#   - "No updates available"
+#
+# FAILURE (status=down):
+#   - "Local changes detected"
+#   - "Core update failed"
+#   - "Submodule update failed"
+#   - "Docker rebuild failed"
+#   - "Build timeout after 60 minutes"
+#
+# Each message includes:
+#   - status: up/down
+#   - msg: Human-readable message
+#   - ping: Duration in milliseconds (for up status)
+#
+################################################################################
+
+################################################################################
+# TROUBLESHOOTING
+################################################################################
+#
+# Issue: Notifications not working
+# Solution:
+#   1. Verify UPTIMEKUMA_PUSH_URL is set correctly
+#   2. Test manually: curl "YOUR_PUSH_URL?status=up&msg=test"
+#   3. Check Uptime Kuma dashboard for monitor status
+#   4. Check script logs: ~/logs/update_*.log
+#
+# Issue: Uptime Kuma shows "down" but script succeeded
+# Solution:
+#   1. Check if push URL is correct
+#   2. Verify network connectivity between servers
+#   3. Check Uptime Kuma logs
+#
+# Issue: Not receiving Discord notifications
+# Solution:
+#   1. Check Uptime Kuma notification settings
+#   2. Verify Discord webhook is configured in Uptime Kuma
+#   3. Test Discord webhook directly from Uptime Kuma
+#
+################################################################################
