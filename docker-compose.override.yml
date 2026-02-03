@@ -1,6 +1,8 @@
-# docker-compose.override.yml for AzerothCore.
+# docker-compose.override.yml for AzerothCore Testing Server
 #
-# Start the server with `docker compose up -d --build`
+# NUMA Node 0 Optimization Applied (Feb 2, 2026)
+# Restricts worldserver to NUMA Node 0 CPUs (even-numbered: 0,2,4,6...38)
+# to avoid CPU conflicts with production server on Node 1
 
 services:
   ac-db-import:
@@ -67,16 +69,47 @@ services:
   ac-worldserver:
     container_name: testing-ac-worldserver
     privileged: true
+    
+    # CRITICAL: Restrict to NUMA Node 0 CPUs only (even-numbered)
+    # This avoids CPU conflicts with production server on Node 1
+    cpuset: "0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38"
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '20'
+          memory: 100G
+        reservations:
+          cpus: '15'
+          memory: 50G
+    
+    shm_size: '4gb'
+    
+    # CRITICAL: Enable database updates
     environment:
+      AC_UPDATES_ENABLE_DATABASES: 7
       AC_LOGIN_DATABASE_INFO: "192.168.144.7;3306;root;${DOCKER_DB_ROOT_PASSWORD:-password};acore_auth"
+    
     ports:
       - ${DOCKER_WORLD_EXTERNAL_PORT:-8585}:8585
       - ${DOCKER_SOAP_EXTERNAL_PORT:-8787}:8787
       - 3443:3443
+    
     networks:
       - ac-network
+    
+    # CRITICAL: Mount modules for database updates and configs
     volumes:
+      - ${DOCKER_VOL_ETC:-./env/dist/etc}:/azerothcore/env/dist/etc
+      - ${DOCKER_VOL_LOGS:-./env/dist/logs}:/azerothcore/env/dist/logs:delegated
+      - ${DOCKER_VOL_DATA:-ac-client-data}:/azerothcore/env/dist/data/:ro
       - ./modules:/azerothcore/modules:ro
+    
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    
     depends_on:
       ac-database:
         condition: service_healthy
@@ -84,14 +117,6 @@ services:
         condition: service_completed_successfully
       ac-bot-relocate:
         condition: service_completed_successfully
-    deploy:
-      resources:
-        limits:
-          cpus: '30'
-          memory: 100G
-        reservations:
-          cpus: '4'
-          memory: 4G
 
   ac-authserver:
     container_name: testing-ac-authserver
