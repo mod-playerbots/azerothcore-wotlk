@@ -180,7 +180,7 @@ class spell_geddon_inferno_aura : public AuraScript
                     break;
             }
 
-            caster->CastCustomSpell(SPELL_INFERNO_DUMMY_EFFECT, SPELLVALUE_BASE_POINT0, 500 * multiplier, (Unit*)nullptr, TRIGGERED_NONE, nullptr, aurEff);
+            caster->CastCustomSpell(SPELL_INFERNO_DUMMY_EFFECT, SPELLVALUE_BASE_POINT0, 3500 * multiplier, (Unit*)nullptr, TRIGGERED_NONE, nullptr, aurEff);
         }
     }
 

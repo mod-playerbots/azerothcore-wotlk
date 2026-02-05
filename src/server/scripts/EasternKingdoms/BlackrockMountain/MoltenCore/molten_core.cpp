@@ -223,7 +223,7 @@ struct npc_lava_spawn : public ScriptedAI
 
     void JustEngagedWith(Unit* /*who*/) override
     {
-        _scheduler.Schedule(15s, [this](TaskContext context)
+        _scheduler.Schedule(20s, [this](TaskContext context)
         {
             std::list<Creature*> lavaSpawns;
             me->GetCreatureListWithEntryInGrid(lavaSpawns, me->GetEntry(), 100.f);
@@ -238,7 +238,7 @@ struct npc_lava_spawn : public ScriptedAI
             }
             else
             {
-                context.Repeat(15s);
+                context.Repeat(20s);
             }
         });
     }

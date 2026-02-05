@@ -59,7 +59,8 @@ public:
             earthquakeTimer = 0;
             pyroblastTimer = urand(3000, 7000);
             enraged = false;
-            DoCastSelf(SPELL_MAGMASPLASH);
+            me->AddAura(SPELL_MAGMASPLASH, me);
+            //DoCastSelf(SPELL_MAGMASPLASH);
             DoCastSelf(SPELL_GOLEMAGG_TRUST_AURA);
             DoCastSelf(SPELL_DOUBLE_ATTACK);
         }

@@ -65,6 +65,11 @@ public:
             events.ScheduleEvent(EVENT_LAVA_BOMB_RANGED, 15s);
         }
 
+        void Reset() override
+        {
+            me->AddAura(SPELL_MAGMA_SPIT, me);
+        }
+
         void ExecuteEvent(uint32 eventId) override
         {
             switch (eventId)
