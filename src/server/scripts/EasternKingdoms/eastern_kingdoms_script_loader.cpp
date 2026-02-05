@@ -163,6 +163,8 @@ void AddSC_western_plaguelands();
 void AddSC_westfall();
 //void AddSC_wetlands();
 void AddSC_burning_steppes();
+//kazke
+void AddSC_boss_kazzak();
 
 // The name of this function should match:
 // void Add${NameOfDirectory}Scripts()
@@ -315,4 +317,6 @@ void AddEasternKingdomsScripts()
     AddSC_westfall();
     //AddSC_wetlands();
     AddSC_burning_steppes();
+    //kazke
+    AddSC_boss_kazzak();
 }

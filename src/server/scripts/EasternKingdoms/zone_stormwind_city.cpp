@@ -463,6 +463,8 @@ enum KingVarianWrynn : uint32
 {
     // Deathknight Starting Zone End
     QUEST_WHERE_KINGS_WALK       = 13188,
+    SPELL_WHIRLWIND = 41056,
+    SPELL_HEROIC_LEAP = 59688,
 };
 
 class npc_king_varian_wrynn : public CreatureScript
@@ -478,6 +480,53 @@ public:
 
         return true;
     }
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_marzon_silent_bladeAI(creature);
+    }
+
+    struct npc_marzon_silent_bladeAI : public ScriptedAI
+    {
+        npc_marzon_silent_bladeAI(Creature* creature) : ScriptedAI(creature) {}
+
+        uint32 heroicTimer;
+        uint32 whirlwindTimer;
+
+        void Reset() override
+        {
+            heroicTimer = 15000;
+            whirlwindTimer = 8000;
+        }
+
+        void JustEngagedWith(Unit* who) override {}
+
+        void UpdateAI(uint32 diff) override
+        {
+            scheduler.Update(diff);
+
+            if (!UpdateVictim())
+                return;
+
+            if (whirlwindTimer <= diff)
+            {
+                DoCastVictim(SPELL_WHIRLWIND);
+                whirlwindTimer = 10000;
+            }
+            else whirlwindTimer -= diff;
+
+            if (heroicTimer <= diff)
+            {
+                if (Unit* target = SelectTarget(SelectTargetMethod::MinDistance, 0, RangeSelector(me, 25.0f, false, true, 5.0f)))
+                {
+                    DoCast(target, SPELL_HEROIC_LEAP);
+                    heroicTimer = 45000;
+                }
+            }
+            else heroicTimer -= diff;
+            DoMeleeAttackIfReady();
+        }
+    };
 };
 
 void AddSC_stormwind_city()
