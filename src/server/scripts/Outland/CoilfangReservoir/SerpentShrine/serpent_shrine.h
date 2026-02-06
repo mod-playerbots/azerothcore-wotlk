@@ -60,6 +60,7 @@ enum SSNPCs
     NPC_FATHOM_GUARD_CARIBDIS               = 21964,
 
     NPC_SEER_OLUM                           = 22820,
+    NPC_MY_XG                               = 21806,
 
     NPC_COILFANG_SHATTERER                  = 21301,
     NPC_COILFANG_PRIESTESS                  = 21220,

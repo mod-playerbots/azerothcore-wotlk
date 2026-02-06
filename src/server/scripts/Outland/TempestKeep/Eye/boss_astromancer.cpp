@@ -38,7 +38,7 @@ enum Spells
     SPELL_WRATH_OF_THE_ASTROMANCER      = 42783,
     SPELL_BLINDING_LIGHT                = 33009,
     SPELL_PSYCHIC_SCREAM                = 34322,
-    SPELL_VOID_BOLT                     = 39329,
+    SPELL_VOID_BOLT                     = 90072,
     SPELL_TRUE_BEAM                     = 33365,
     SPELL_TELEPORT_START_POSITION       = 33244,
 };

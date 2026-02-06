@@ -44,6 +44,8 @@ enum EyeData
 enum EyeNPCs
 {
     NPC_ALAR                = 19514,
+    NPC_VOID_REAVER         = 19516,
+    NPC_ASTROMANCER         = 18805, 
     NPC_KAELTHAS            = 19622,
     NPC_THALADRED           = 20064,
     NPC_LORD_SANGUINAR      = 20060,
@@ -57,7 +59,16 @@ enum EyeGOs
     GO_KAEL_STATUE_RIGHT    = 184596,
     GO_KAEL_STATUE_LEFT     = 184597,
     GO_KAEL_DOOR_1          = 184324,
-    GO_KAEL_DOOR_2          = 184325
+    GO_KAEL_DOOR_2          = 184325,
+    GO_TK_Raid_Door03       = 184327,
+    GO_TK_Raid_Door04       = 184329,
+    GO_TK_ALAR_DOOR         = 500000,
+    GO_TK_ALAR_ENTRY_DOOR   = 500001,
+    GO_TK_REAVER_DOOR       = 500002,
+    GO_TK_KAEL_ENTRY_DOOR_1 = 184326,
+    GO_TK_KAEL_ENTRY_DOOR_2 = 184328,
+    GO_TK_ASTRO_DOOR        = 500003
+
 };
 
 template <class AI, class T>

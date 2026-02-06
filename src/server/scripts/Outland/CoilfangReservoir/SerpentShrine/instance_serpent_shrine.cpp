@@ -51,6 +51,7 @@ MinionData const minionData[] =
     { NPC_FATHOM_GUARD_SHARKKIS,  DATA_FATHOM_LORD_KARATHRESS },
     { NPC_FATHOM_GUARD_TIDALVESS, DATA_FATHOM_LORD_KARATHRESS },
     { NPC_FATHOM_GUARD_CARIBDIS,  DATA_FATHOM_LORD_KARATHRESS },
+    { NPC_MY_XG,                     DATA_LEOTHERAS_THE_BLIND },
     { 0,                          0,                          }
 };
 
@@ -129,6 +130,11 @@ public:
         {
             switch (creature->GetEntry())
             {
+                case NPC_MY_XG:
+                {
+                    AddMinion(creature);
+                    break;
+                }
                 case NPC_COILFANG_SHATTERER:
                 case NPC_COILFANG_PRIESTESS:
                     if (creature->GetPositionX() > 190.0f)
@@ -145,6 +151,18 @@ public:
                     break;
             }
             InstanceScript::OnCreatureCreate(creature);
+        }
+
+        void OnCreatureRemove(Creature* creature) override
+        {
+            switch (creature->GetEntry())
+            {
+            case NPC_MY_XG:
+            {
+                RemoveMinion(creature);
+                break;
+            }
+            }
         }
 
         void SetData(uint32 type, uint32  /*data*/) override

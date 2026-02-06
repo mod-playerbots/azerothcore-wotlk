@@ -68,6 +68,22 @@ enum Misc
     NPC_TRIGGER                     = 15384
 };
 
+float ElementWPPos[8][3] =
+{
+    {71.700752f, -883.905884f, 41.097168f},
+    {45.039848f, -868.022827f, 41.097015f},
+    {14.585141f, -867.894470f, 41.097061f},
+    {-25.415508f, -906.737732f, 41.097061f},
+    {-11.801594f, -963.405884f, 41.097067f},
+    {14.556657f, -979.051514f, 41.097137f},
+    {43.466549f, -979.406677f, 41.097027f},
+    {69.945908f, -964.663940f, 41.097054f}
+};
+
+#define MIDDLE_X                30.134f
+#define MIDDLE_Y                -923.65f
+#define MIDDLE_Z                42.9f
+
 struct boss_lady_vashj : public BossAI
 {
     boss_lady_vashj(Creature* creature) : BossAI(creature, DATA_LADY_VASHJ)
@@ -269,6 +285,60 @@ private:
     std::chrono::seconds _batTimer;
 };
 
+class npc_enchanted_elemental : public CreatureScript
+{
+public:
+    npc_enchanted_elemental() : CreatureScript("npc_enchanted_elemental") {}
+
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        return new npc_enchanted_elementalAI(creature);
+    }
+
+    struct npc_enchanted_elementalAI : public ScriptedAI
+    {
+        npc_enchanted_elementalAI(Creature* creature) : ScriptedAI(creature)
+        {
+            instance = creature->GetInstanceScript();
+        }
+
+        InstanceScript* instance;
+        uint32 Move;
+        float X, Y, Z;
+
+        uint64 VashjGUID;
+
+        void Reset() override
+        {
+            me->SetSpeed(MOVE_WALK, 0.6f); // walk
+            me->SetSpeed(MOVE_RUN, 0.6f); // run
+
+            VashjGUID = 0;
+
+            if (instance)
+                VashjGUID = instance->GetData64(DATA_LADY_VASHJ);
+        }
+
+        void JustEngagedWith(Unit* who) override{}
+
+        void MoveInLineOfSight(Unit* /*who*/) override {}
+
+
+        void UpdateAI(uint32 diff) override
+        {
+            if (Move <= diff)
+            {
+                me->SetWalk(true);
+                    me->GetMotionMaster()->MovePoint(0, MIDDLE_X, MIDDLE_Y, MIDDLE_Z);
+                    if (me->IsWithinDist3d(MIDDLE_X, MIDDLE_Y, MIDDLE_Z, 6))
+                        DoCast(me, SPELL_SURGE);
+            }
+            else Move -= diff;
+        }
+    };
+
+};
+
 class spell_lady_vashj_magic_barrier : public AuraScript
 {
     PrepareAuraScript(spell_lady_vashj_magic_barrier);
@@ -404,6 +474,7 @@ class spell_lady_vashj_summons : public SpellScript
 void AddSC_boss_lady_vashj()
 {
     RegisterSerpentShrineAI(boss_lady_vashj);
+    new npc_enchanted_elemental();
     RegisterSpellScript(spell_lady_vashj_magic_barrier);
     RegisterSpellScript(spell_lady_vashj_remove_tainted_cores);
     RegisterSpellScript(spell_lady_vashj_summon_sporebat);
