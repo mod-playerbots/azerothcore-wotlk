@@ -3650,6 +3650,19 @@ void SpellMgr::LoadSpellInfoCustomAttributes()
             case 60923://冬握湖副本小怪 岩石雨
             case 71337://ICC10 辛德拉苟莎小怪击飞
             case 71338://ICC25 辛德拉苟莎小怪击飞
+            case 18944://MC巨人
+            case 19196://石头人冲锋
+            case 20276://jidao
+            case 19129://AOE
+            case 20685:
+            case 38461://盘牙蝙蝠冲锋
+            case 37363://鱼丝拉旋风
+            case 38630://盘牙持盾者
+            case 37641://盲眼旋风斩
+            case 37764://踏浪者践踏
+            case 37157://風暴要塞龍鷹擊飛
+            case 36980://凱爾薩斯小怪射擊
+            case 36979://凱爾薩斯小怪射擊
                 spellInfo->AttributesCu |= SPELL_ATTR0_CU_IGNORE_ARMOR;
                 break;
             case 66331: //  (10戈莫克穿刺)
