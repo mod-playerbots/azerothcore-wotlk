@@ -284,6 +284,7 @@ public:
                     static_minionsGUIDS.clear();
 
                     instance->SetBossState(DATA_MAJORDOMO_EXECUTUS, DONE);
+                    me->CastSpell(me, SPELL_NIGHT_CREDIT, true);
                     events.CancelEventGroup(PHASE_COMBAT);
                     me->GetMap()->UpdateEncounterState(ENCOUNTER_CREDIT_KILL_CREATURE, me->GetEntry(), me);
                     me->SetImmuneToAll(true);

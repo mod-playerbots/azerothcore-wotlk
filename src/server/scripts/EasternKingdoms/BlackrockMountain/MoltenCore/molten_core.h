@@ -116,6 +116,7 @@ enum MCGameObjects
 enum MCSpells
 {
     SPELL_CORE_RAGER_QUIET_SUICIDE  = 3617,     // Server side
+    SPELL_NIGHT_CREDIT              = 100000
 };
 
 extern Position const MajordomoRagnaros;        // Teleport location to Ragnaros summons area
