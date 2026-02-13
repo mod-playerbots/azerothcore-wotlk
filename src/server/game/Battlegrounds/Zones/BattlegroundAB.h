@@ -293,7 +293,6 @@ private:
     void SendNodeUpdate(uint8 node);
     void NodeOccupied(uint8 node);
     void NodeDeoccupied(uint8 node);
-    void ApplyPhaseMask();
 
     CaptureABPointInfo _capturePointInfo[BG_AB_DYNAMIC_NODES_COUNT];
     EventMap _bgEvents;
