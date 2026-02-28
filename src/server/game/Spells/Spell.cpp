@@ -2559,11 +2559,15 @@ void Spell::DoAllEffectOnTarget(TargetInfo* target)
     if (effectUnit->IsAlive() != target->alive)
         return;
 
-    // Xinef: absorb delayed projectiles for 500ms
-    if (getState() == SPELL_STATE_DELAYED && !m_spellInfo->IsTargetingArea() && !m_spellInfo->IsPositive() &&
-            (GameTime::GetGameTimeMS().count() - target->timeDelay) <= effectUnit->m_lastSanctuaryTime && GameTime::GetGameTimeMS().count() < (effectUnit->m_lastSanctuaryTime + 500) &&
-            effectUnit->FindMap() && !effectUnit->FindMap()->IsDungeon()
-       )
+    // Absorb delayed projectiles launched before Sanctuary (e.g. Vanish dodging a Frostbolt in flight)
+    if (getState() == SPELL_STATE_DELAYED && !m_spellInfo->IsPositive() &&
+            (GameTime::GetGameTimeMS().count() - target->timeDelay) <= effectUnit->m_lastSanctuaryTime)
+        return;                                             // No missinfo in that case
+
+    // Absorb instant hostile spells on application within brief window after Sanctuary
+    if (getState() != SPELL_STATE_DELAYED && !m_spellInfo->IsPositive() &&
+            effectUnit->m_lastSanctuaryTime &&
+            GameTime::GetGameTimeMS().count() <= (effectUnit->m_lastSanctuaryTime + 400))
         return;                                             // No missinfo in that case
 
     // Get original caster (if exist) and calculate damage/healing from him data
@@ -4472,10 +4476,6 @@ void Spell::finish(bool ok)
             if (m_spellInfo->IsCooldownStartedOnEvent())
                 m_caster->ToPlayer()->SendCooldownEvent(m_spellInfo, 0, 0, false);
 
-            // Rogue fix: Remove Cold Blood if Mutilate off-hand failed
-            if (m_spellInfo->Id == 27576) // Mutilate, off-hand
-                if (m_caster->HasAura(14177))
-                    m_caster->RemoveAura(14177);
         }
         return;
     }
