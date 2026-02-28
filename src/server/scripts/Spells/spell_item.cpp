@@ -1206,31 +1206,6 @@ class spell_item_trauma : public AuraScript
     }
 };
 
-class spell_item_blade_ward_enchant : public AuraScript
-{
-    PrepareAuraScript(spell_item_blade_ward_enchant);
-
-    void HandleProc(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
-    {
-        PreventDefaultAction();
-        if (!eventInfo.GetActionTarget())
-        {
-            return;
-        }
-
-        if (SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(64442 /*SPELL_BLADE_WARDING*/))
-        {
-            int32 basepoints = spellInfo->Effects[EFFECT_0].CalcValue() * this->GetStackAmount();
-            eventInfo.GetActionTarget()->CastCustomSpell(spellInfo->Id, SPELLVALUE_BASE_POINT0, basepoints, eventInfo.GetActor(), true);
-        }
-    }
-
-    void Register() override
-    {
-        OnEffectProc += AuraEffectProcFn(spell_item_blade_ward_enchant::HandleProc, EFFECT_1, SPELL_AURA_PROC_TRIGGER_SPELL);
-    }
-};
-
 class spell_item_blood_draining_enchant : public AuraScript
 {
     PrepareAuraScript(spell_item_blood_draining_enchant);
@@ -5928,7 +5903,10 @@ class spell_item_swift_hand_justice_dummy : public AuraScript
     void HandleProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
     {
         PreventDefaultAction();
-        eventInfo.GetActor()->CastSpell(nullptr, SPELL_SWIFT_HAND_OF_JUSTICE_HEAL, true, nullptr, aurEff);
+
+        Unit* caster = eventInfo.GetActor();
+        int32 bp0 = static_cast<int32>(caster->CountPctFromMaxHealth(aurEff->GetAmount()));
+        caster->CastCustomSpell(SPELL_SWIFT_HAND_OF_JUSTICE_HEAL, SPELLVALUE_BASE_POINT0, bp0, nullptr, true, nullptr, aurEff);
     }
 
     void Register() override
@@ -6236,7 +6214,6 @@ void AddSC_item_spell_scripts()
     RegisterSpellScript(spell_item_fetch_ball);
     RegisterSpellScript(spell_item_oracle_ablutions);
     RegisterSpellScript(spell_item_trauma);
-    RegisterSpellScript(spell_item_blade_ward_enchant);
     RegisterSpellScript(spell_item_blood_draining_enchant);
     RegisterSpellScript(spell_item_dragon_kite_summon_lightning_bunny);
     RegisterSpellScript(spell_item_enchanted_broom_periodic);

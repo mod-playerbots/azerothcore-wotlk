@@ -1404,33 +1404,6 @@ class spell_pal_spiritual_attunement : public AuraScript
     }
 };
 
-// 54937 - Glyph of Holy Light (proc trigger)
-class spell_pal_glyph_of_holy_light_proc : public AuraScript
-{
-    PrepareAuraScript(spell_pal_glyph_of_holy_light_proc);
-
-    bool Validate(SpellInfo const* /*spellInfo*/) override
-    {
-        return ValidateSpellInfo({ SPELL_PALADIN_GLYPH_OF_HOLY_LIGHT_HEAL });
-    }
-
-    void HandleProc(AuraEffect const* aurEff, ProcEventInfo& eventInfo)
-    {
-        PreventDefaultAction();
-        HealInfo* healInfo = eventInfo.GetHealInfo();
-        if (!healInfo || !healInfo->GetHeal())
-            return;
-
-        int32 bp = CalculatePct(int32(healInfo->GetHeal()), aurEff->GetAmount());
-        GetTarget()->CastCustomSpell(SPELL_PALADIN_GLYPH_OF_HOLY_LIGHT_HEAL, SPELLVALUE_BASE_POINT0, bp, eventInfo.GetActionTarget(), true, nullptr, aurEff);
-    }
-
-    void Register() override
-    {
-        OnEffectProc += AuraEffectProcFn(spell_pal_glyph_of_holy_light_proc::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
-    }
-};
-
 // 1022 - Hand of Protection
 class spell_pal_hand_of_protection : public SpellScript
 {
@@ -2115,18 +2088,12 @@ class spell_pal_light_s_beacon : public AuraScript
             SPELL_PALADIN_BEACON_OF_LIGHT_AURA,
             SPELL_PALADIN_BEACON_OF_LIGHT_FLASH,
             SPELL_PALADIN_BEACON_OF_LIGHT_HOLY,
-            SPELL_PALADIN_HOLY_LIGHT_R1,
-            SPELL_PALADIN_JUDGEMENT_OF_LIGHT_HEAL
+            SPELL_PALADIN_HOLY_LIGHT_R1
         });
     }
 
     bool CheckProc(ProcEventInfo& eventInfo)
     {
-        // Don't proc from Judgement of Light heals — JoL sets originalCaster to
-        // the paladin for combat log, but the heal is actually cast by the attacker.
-        if (eventInfo.GetSpellInfo() && eventInfo.GetSpellInfo()->Id == SPELL_PALADIN_JUDGEMENT_OF_LIGHT_HEAL)
-            return false;
-
         // Don't proc if the heal target is the beacon target (no double heal)
         if (GetTarget()->HasAura(SPELL_PALADIN_BEACON_OF_LIGHT_AURA, eventInfo.GetActor()->GetGUID()))
             return false;
@@ -2157,7 +2124,7 @@ class spell_pal_light_s_beacon : public AuraScript
         if (!beaconTarget || !beaconTarget->HasAura(SPELL_PALADIN_BEACON_OF_LIGHT_AURA, eventInfo.GetActor()->GetGUID()))
             return;
 
-        eventInfo.GetActor()->CastCustomSpell(healSpellId, SPELLVALUE_BASE_POINT0, heal, beaconTarget, true, nullptr, aurEff);
+        eventInfo.GetActor()->CastCustomSpell(healSpellId, SPELLVALUE_BASE_POINT0, heal, beaconTarget, true, nullptr, aurEff, eventInfo.GetActor()->GetGUID());
     }
 
     void Register() override
@@ -2209,7 +2176,6 @@ void AddSC_paladin_spell_scripts()
     RegisterSpellScript(spell_pal_judgement_of_light_heal);
     RegisterSpellScript(spell_pal_judgement_of_wisdom_mana);
     RegisterSpellScript(spell_pal_spiritual_attunement);
-    RegisterSpellScript(spell_pal_glyph_of_holy_light_proc);
     RegisterSpellScript(spell_pal_t3_6p_bonus);
     RegisterSpellScript(spell_pal_t8_2p_bonus);
     RegisterSpellScript(spell_pal_glyph_of_divinity);

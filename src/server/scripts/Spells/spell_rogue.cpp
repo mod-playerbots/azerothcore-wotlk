@@ -844,19 +844,22 @@ class spell_rog_cut_to_the_chase : public AuraScript
 {
     PrepareAuraScript(spell_rog_cut_to_the_chase);
 
-    void HandleProc(ProcEventInfo& /*eventInfo*/)
+    void HandleProc(AuraEffect const* /*aurEff*/, ProcEventInfo& eventInfo)
     {
         PreventDefaultAction();
-        // Refresh Slice and Dice to 5 combo point max duration
-        if (AuraEffect const* snDEffect = GetTarget()->GetAuraEffect(SPELL_AURA_MOD_MELEE_HASTE, SPELLFAMILY_ROGUE, 0x40000, 0, 0))
+        // Refresh Slice and Dice to its 5 combo point maximum duration
+        Unit* caster = eventInfo.GetActor();
+        if (AuraEffect const* snd = caster->GetAuraEffect(SPELL_AURA_MOD_MELEE_HASTE, SPELLFAMILY_ROGUE, 0x40000, 0, 0, caster->GetGUID()))
         {
-            snDEffect->GetBase()->SetDuration(snDEffect->GetSpellInfo()->GetMaxDuration(), true);
+            int32 maxDuration = snd->GetSpellInfo()->GetMaxDuration();
+            snd->GetBase()->SetDuration(maxDuration, true);
+            snd->GetBase()->SetMaxDuration(snd->GetBase()->GetDuration());
         }
     }
 
     void Register() override
     {
-        OnProc += AuraProcFn(spell_rog_cut_to_the_chase::HandleProc);
+        OnEffectProc += AuraEffectProcFn(spell_rog_cut_to_the_chase::HandleProc, EFFECT_0, SPELL_AURA_DUMMY);
     }
 };
 
@@ -1043,13 +1046,43 @@ class spell_rog_turn_the_tables : public AuraScript
 };
 
 // 52910, 52914, 52915 - Turn the Tables (proc)
-class spell_rog_turn_the_tables_proc : public AuraScript
+class spell_rog_turn_the_tables_proc : public SpellScript
 {
-    PrepareAuraScript(spell_rog_turn_the_tables_proc);
+    PrepareSpellScript(spell_rog_turn_the_tables_proc);
+
+    void FilterTargets(std::list<WorldObject*>& targets)
+    {
+        targets.clear();
+        targets.push_back(GetCaster());
+    }
 
     void Register() override
     {
-        // No special handling needed - default behavior
+        OnObjectAreaTargetSelect += SpellObjectAreaTargetSelectFn(spell_rog_turn_the_tables_proc::FilterTargets, EFFECT_0, TARGET_UNIT_CASTER_AREA_RAID);
+    }
+};
+
+// -51634 - Focused Attacks
+// Block Fan of Knives offhand from proccing
+class spell_rog_focused_attacks : public AuraScript
+{
+    PrepareAuraScript(spell_rog_focused_attacks);
+
+    bool CheckProc(ProcEventInfo& eventInfo)
+    {
+        // Block Fan of Knives offhand (0x40000) from proccing
+        SpellInfo const* spellInfo = eventInfo.GetSpellInfo();
+        if (spellInfo && spellInfo->SpellFamilyName == SPELLFAMILY_ROGUE
+            && (spellInfo->SpellFamilyFlags[1] & 0x40000)
+            && (eventInfo.GetTypeMask() & PROC_FLAG_DONE_OFFHAND_ATTACK))
+            return false;
+
+        return true;
+    }
+
+    void Register() override
+    {
+        DoCheckProc += AuraCheckProcFn(spell_rog_focused_attacks::CheckProc);
     }
 };
 
@@ -1083,4 +1116,5 @@ void AddSC_rogue_spell_scripts()
     RegisterSpellAndAuraScriptPair(spell_rog_honor_among_thieves_proc, spell_rog_honor_among_thieves_proc_aura);
     RegisterSpellScript(spell_rog_turn_the_tables);
     RegisterSpellScript(spell_rog_turn_the_tables_proc);
+    RegisterSpellScript(spell_rog_focused_attacks);
 }
