@@ -4121,8 +4121,8 @@ void SpellMgr::LoadSpellInfoCorrections()
     // Burning Adrenaline
     ApplySpellFix({ 23478 }, [](SpellInfo* spellInfo)
     {
-        spellInfo->Effects[EFFECT_0].BasePoints = 4374;
-        spellInfo->Effects[EFFECT_0].DieSides = 1250;
+        spellInfo->Effects[EFFECT_0].BasePoints = 31522;
+        spellInfo->Effects[EFFECT_0].DieSides = 2128;
     });
 
     // Explosion - Razorgore
