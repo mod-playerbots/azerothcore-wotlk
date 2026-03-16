@@ -1252,7 +1252,7 @@ public:
 class npc_ball_of_flame : public CreatureScript
 {
 public:
-    npc_ball_of_flame() : CreatureScript("npc_ball_of_flame") { }
+    npc_ball_of_flame() : CreatureScript("npc_ball_of_flame") {}
 
     struct npc_ball_of_flameAI : public ScriptedAI
     {
@@ -1260,6 +1260,8 @@ public:
         {
             _exploded = false;
             _started = false;
+            _originalScale = 1.0f;
+            _damageCount = 0;
             if (me->GetEntry() == NPC_BALL_OF_INFERNO_FLAME)
                 me->CastSpell(me, SPELL_BALL_OF_FLAMES_PROC, true);
             me->NearTeleportTo(me->GetPositionX(), me->GetPositionY(), me->GetPositionZ() + 5.0f, me->GetOrientation());
@@ -1269,6 +1271,8 @@ public:
         ObjectGuid _chaseGUID;
         bool _exploded;
         bool _started;
+        float _originalScale;
+        uint8 _damageCount;
 
         void AttackStart(Unit* who) override
         {
@@ -1319,6 +1323,8 @@ public:
             {
                 // need to clear states now because this call is before AuraEffect is fully removed
                 _started = true;
+                _originalScale = me->GetObjectScale();
+                _damageCount = 0;
                 if (me->GetEntry() == NPC_BALL_OF_INFERNO_FLAME)
                     me->CastSpell(me, SPELL_BALL_OF_FLAMES_PERIODIC, true);
                 me->ClearUnitState(UNIT_STATE_CASTING | UNIT_STATE_STUNNED);
@@ -1345,6 +1351,19 @@ public:
             {
                 _instance->SetData(DATA_ORB_WHISPERER_ACHIEVEMENT, 0);
             }
+
+            // Decrease size and damage on each hit
+            if (_started && !_exploded)
+            {
+                _damageCount++;
+                float scaleReduction = 0.25f * _damageCount; // Reduce by 25% per hit
+                float newScale = std::max(0.25f, _originalScale - scaleReduction);
+                me->SetObjectScale(newScale);
+
+                // Scale damage based on current size relative to original size
+                float damageMultiplier = newScale / _originalScale;
+                damage = static_cast<uint32>(damage * damageMultiplier);
+            }
         }
     };
 
@@ -1357,7 +1376,7 @@ public:
 class npc_kinetic_bomb : public CreatureScript
 {
 public:
-    npc_kinetic_bomb() : CreatureScript("npc_kinetic_bomb") { }
+    npc_kinetic_bomb() : CreatureScript("npc_kinetic_bomb") {}
 
     struct npc_kinetic_bombAI : public NullCreatureAI
     {
@@ -1370,16 +1389,13 @@ public:
         float _y;
         float _groundZ;
         bool exploded;
+        bool _isKnockback; // guards against spam-triggering the jump
 
         void IsSummonedBy(WorldObject* /*summoner*/) override
         {
             if (InstanceScript* instance = me->GetInstanceScript())
-            {
                 if (Creature* valanar = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_PRINCE_VALANAR_GUID)))
-                {
                     valanar->AI()->JustSummoned(me);
-                }
-            }
         }
 
         void Reset() override
@@ -1388,6 +1404,7 @@ public:
             _events.RescheduleEvent(EVENT_BOMB_DESPAWN, 1min);
             me->SetWalk(true);
             exploded = false;
+            _isKnockback = false;
 
             float x, y, z;
             me->GetPosition(x, y, z);
@@ -1406,8 +1423,11 @@ public:
             }
             else if (action == ACTION_KINETIC_BOMB_JUMP)
             {
-                if (!me->HasAura(SPELL_KINETIC_BOMB_KNOCKBACK))
+                // Use _isKnockback instead of relying on the DB proc aura (SPELL_KINETIC_BOMB_KNOCKBACK)
+                // which may not be applied in all configurations.
+                if (!_isKnockback)
                 {
+                    _isKnockback = true;
                     me->GetMotionMaster()->MovementExpired(false);
                     me->StopMoving();
                     me->GetMotionMaster()->MoveCharge(_x, _y, me->GetPositionZ() + 60.0f, me->GetSpeed(MOVE_RUN));
@@ -1416,21 +1436,30 @@ public:
             }
         }
 
+        // Trigger the upward jump directly when players or pets deal damage to the bomb,
+        // replacing the broken DB proc (SPELL_KINETIC_BOMB_KNOCKBACK) dependency.
+        void DamageTaken(Unit* /*attacker*/, uint32& /*damage*/, DamageEffectType, SpellSchoolMask) override
+        {
+            if (!exploded)
+                DoAction(ACTION_KINETIC_BOMB_JUMP);
+        }
+
         void UpdateAI(uint32 diff) override
         {
             _events.Update(diff);
             switch (_events.ExecuteEvent())
             {
-                case EVENT_BOMB_DESPAWN:
-                    me->RemoveAllAuras();
-                    me->SetUnitFlag(UNIT_FLAG_NOT_SELECTABLE);
-                    me->DespawnOrUnsummon(exploded ? 5s : 0ms);
-                    break;
-                case EVENT_CONTINUE_FALLING:
-                    me->GetMotionMaster()->MovementExpired(false);
-                    me->StopMoving();
-                    me->GetMotionMaster()->MoveCharge(_x, _y, _groundZ, me->GetSpeed(MOVE_WALK));
-                    break;
+            case EVENT_BOMB_DESPAWN:
+                me->RemoveAllAuras();
+                me->SetUnitFlag(UNIT_FLAG_NOT_SELECTABLE);
+                me->DespawnOrUnsummon(exploded ? 5s : 0ms);
+                break;
+            case EVENT_CONTINUE_FALLING:
+                _isKnockback = false;
+                me->GetMotionMaster()->MovementExpired(false);
+                me->StopMoving();
+                me->GetMotionMaster()->MoveCharge(_x, _y, _groundZ, me->GetSpeed(MOVE_WALK));
+                break;
             }
         }
     };
