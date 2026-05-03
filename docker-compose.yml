@@ -85,6 +85,7 @@ services:
       - ${DOCKER_VOL_LOGS:-./env/dist/logs}:/azerothcore/env/dist/logs:delegated
       # client data
       - ${DOCKER_VOL_DATA:-ac-client-data}:/azerothcore/env/dist/data/:ro
+      - ./modules:/azerothcore/modules
     depends_on:
       ac-database:
         condition: service_healthy
