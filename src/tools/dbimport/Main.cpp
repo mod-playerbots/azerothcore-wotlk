@@ -108,14 +108,20 @@ bool StartDB()
     LOG_INFO("dbimport", "Loading modules: {}", modules.empty() ? "none" : modules);
 
     DatabaseLoader loader =
-        modules.empty() ? DatabaseLoader("dbimport") :
-        (modules == "all") ? DatabaseLoader("dbimport", DatabaseLoader::DATABASE_MASK_ALL, AC_MODULES_LIST) :
-        DatabaseLoader("dbimport", DatabaseLoader::DATABASE_MASK_ALL, modules);
+        modules.empty()
+            ? DatabaseLoader("dbimport")
+            : (modules == "all"
+                ? DatabaseLoader("dbimport", DatabaseLoader::DATABASE_MASK_ALL, AC_MODULES_LIST)
+                : DatabaseLoader("dbimport", DatabaseLoader::DATABASE_MASK_ALL, modules));
 
     loader
         .AddDatabase(LoginDatabase, "Login")
         .AddDatabase(CharacterDatabase, "Character")
         .AddDatabase(WorldDatabase, "World");
+
+#ifdef MOD_PLAYERBOTS
+    loader.AddDatabase(PlayerbotsDatabase, "Playerbots");
+#endif
 
     if (!loader.Load())
         return false;
@@ -130,6 +136,10 @@ void StopDB()
     CharacterDatabase.Close();
     WorldDatabase.Close();
     LoginDatabase.Close();
+#ifdef MOD_PLAYERBOTS
+    PlayerbotsDatabase.Close();
+#endif
+
     MySQL::Library_End();
 }
 

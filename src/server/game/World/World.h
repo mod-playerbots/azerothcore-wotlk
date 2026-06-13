@@ -229,9 +229,6 @@ public:
     // used World DB version
     void LoadDBVersion() override;
     [[nodiscard]] char const* GetDBVersion() const override { return _dbVersion.c_str(); }
-#ifdef MOD_PLAYERBOTS
-    [[nodiscard]] char const* GetPlayerbotsDBRevision() const override { return m_PlayerbotsDBRevision.c_str(); }
-#endif
 
     void UpdateAreaDependentAuras() override;
 
@@ -307,9 +304,6 @@ private:
     // used versions
     std::string _dbVersion;
     uint32 _dbClientCacheVersion;
-#ifdef MOD_PLAYERBOTS
-    std::string m_PlayerbotsDBRevision;
-#endif
 
     void ProcessQueryCallbacks();
     QueryCallbackProcessor _queryProcessor;

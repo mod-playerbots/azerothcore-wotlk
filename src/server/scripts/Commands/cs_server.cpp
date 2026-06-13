@@ -214,10 +214,6 @@ public:
         handler->PSendSysMessage("Default DBC locale: {}.\nAll available DBC locales: {}", localeNames[defaultLocale], availableLocales);
 
         handler->PSendSysMessage("Using World DB: {}", sWorld->GetDBVersion());
-#ifdef MOD_PLAYERBOTS
-        handler->PSendSysMessage("Using Playerbots DB Revision: {}", sWorld->GetPlayerbotsDBRevision());
-#endif
-        
 
         std::string lldb = "No updates found!";
         if (QueryResult resL = LoginDatabase.Query("SELECT name FROM updates ORDER BY name DESC LIMIT 1"))
@@ -238,9 +234,21 @@ public:
             lwdb = fields[0].Get<std::string>();
         }
 
+#ifdef MOD_PLAYERBOTS
+        std::string lpdb = "No updates found!";
+        if (QueryResult resP = PlayerbotsDatabase.Query("SELECT name FROM updates ORDER BY name DESC LIMIT 1"))
+        {
+            Field* fields = resP->Fetch();
+            lpdb = fields[0].Get<std::string>();
+        }
+#endif
+
         handler->PSendSysMessage("Latest LoginDatabase update: {}", lldb);
         handler->PSendSysMessage("Latest CharacterDatabase update: {}", lcdb);
         handler->PSendSysMessage("Latest WorldDatabase update: {}", lwdb);
+#ifdef MOD_PLAYERBOTS
+        handler->PSendSysMessage("Latest PlayerbotsDatabase update: {}", lpdb);
+#endif
 
         handler->PSendSysMessage("LoginDatabase queue size: {}", LoginDatabase.QueueSize());
         handler->PSendSysMessage("CharacterDatabase queue size: {}", CharacterDatabase.QueueSize());

@@ -795,6 +795,10 @@ void WorldSession::LogoutPlayer(bool save)
 
         uint32 statementIndex = CHAR_UPD_ACCOUNT_ONLINE;
         uint32 statementParam = GetAccountId();
+#ifdef MOD_PLAYERBOTS
+        statementIndex = CHAR_UPD_CHAR_OFFLINE;
+        statementParam = _player->GetGUID().GetCounter();
+#endif
         sScriptMgr->OnDatabaseSelectIndexLogout(_player, statementIndex, statementParam);
 
         //! Remove the player from the world

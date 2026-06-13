@@ -31,6 +31,9 @@ namespace
     std::string const LOGIN_DATABASE_INFO_DEFAULT = "127.0.0.1;3306;acore;acore;acore_auth";
     std::string const WORLD_DATABASE_INFO_DEFAULT = "127.0.0.1;3306;acore;acore;acore_world";
     std::string const CHARACTER_DATABASE_INFO_DEFAULT = "127.0.0.1;3306;acore;acore;acore_characters";
+#ifdef MOD_PLAYERBOTS
+    std::string const PLAYERBOTS_DATABASE_INFO_DEFAULT = "127.0.0.1;3306;acore;acore;acore_playerbots";
+#endif
     std::string const& GetDefaultDatabaseInfo(std::string_view name)
     {
         if (name == "Login")
@@ -39,6 +42,10 @@ namespace
             return WORLD_DATABASE_INFO_DEFAULT;
         if (name == "Character")
             return CHARACTER_DATABASE_INFO_DEFAULT;
+#ifdef MOD_PLAYERBOTS
+        if (name == "Playerbots")
+            return PLAYERBOTS_DATABASE_INFO_DEFAULT;
+#endif
         return EMPTY_DATABASE_INFO;
     }
 }

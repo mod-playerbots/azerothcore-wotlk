@@ -431,6 +431,10 @@ bool StartDB()
         .AddDatabase(CharacterDatabase, "Character")
         .AddDatabase(WorldDatabase, "World");
 
+#ifdef MOD_PLAYERBOTS
+    loader.AddDatabase(PlayerbotsDatabase, "Playerbots");
+#endif
+
     if (!loader.Load())
         return false;
 
@@ -483,6 +487,10 @@ void StopDB()
     CharacterDatabase.Close();
     WorldDatabase.Close();
     LoginDatabase.Close();
+
+#ifdef MOD_PLAYERBOTS
+    PlayerbotsDatabase.Close();
+#endif
 
     sScriptMgr->OnDatabasesClosing();
 
@@ -612,6 +620,9 @@ void WorldUpdateLoop()
     LoginDatabase.WarnAboutSyncQueries(false);
     CharacterDatabase.WarnAboutSyncQueries(false);
     WorldDatabase.WarnAboutSyncQueries(false);
+#ifdef MOD_PLAYERBOTS
+    PlayerbotsDatabase.WarnAboutSyncQueries(false);
+#endif
 }
 
 void SignalHandler(boost::system::error_code const& error, int /*signalNumber*/)
