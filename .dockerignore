@@ -9,6 +9,7 @@
 /.env*
 .idea
 !.gitkeep
-
+!build/src/server/apps/worldserver
+!build/src/server/apps/authserver
 # do not ignore the ccache folder (used by the ci)
 !/var/docker/ccache
