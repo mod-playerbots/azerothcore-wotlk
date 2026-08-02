@@ -1,0 +1,22 @@
+FROM ubuntu:24.04
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates tzdata \
+    libc6 libstdc++6 libgcc-s1 zlib1g libssl3 \
+    libmariadb3 libmysqlclient21 \
+    libreadline8 libncursesw6 libtinfo6 \
+    libboost-filesystem1.83.0 libboost-system1.83.0 \
+    libboost-program-options1.83.0 libboost-thread1.83.0 \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /azerothcore
+
+# copiar binario compilado
+COPY build/src/server/apps/authserver/authserver /azerothcore/authserver
+
+# copiar configs
+COPY env/dist/etc/authserver.conf.dist /azerothcore/authserver.conf
+
+EXPOSE 3724
+
+CMD ["/azerothcore/authserver"]

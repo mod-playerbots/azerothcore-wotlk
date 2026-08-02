@@ -130,4 +130,7 @@
     "C_Cpp.default.compilerPath": "/usr/bin/clang",
     "cmake.sourceDirectory": ["${workspaceFolder}"],
     "cmake.buildDirectory": "${workspaceFolder}/var/build",
+    "chat.tools.terminal.autoApprove": {
+        "wsl.exe": true
+    },
 }

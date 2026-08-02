@@ -1,0 +1,23 @@
+FROM ubuntu:24.04
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates tzdata \
+    libc6 libstdc++6 libgcc-s1 zlib1g libssl3 \
+    libmariadb3 libmysqlclient21 \
+    libreadline8 libncursesw6 libtinfo6 \
+    libboost-filesystem1.83.0 libboost-system1.83.0 libboost-program-options1.83.0 libboost-thread1.83.0 \
+    liblua5.3-0 \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /azerothcore
+
+COPY build/src/server/apps/worldserver /azerothcore/worldserver
+COPY build/src/server/apps/authserver /azerothcore/authserver
+
+COPY conf /azerothcore/conf
+
+RUN chmod +x /azerothcore/worldserver /azerothcore/authserver
+
+EXPOSE 8085
+
+CMD ["/azerothcore/worldserver"]
