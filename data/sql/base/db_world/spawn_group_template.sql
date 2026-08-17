@@ -25,7 +25,7 @@ CREATE TABLE `spawn_group_template` (
   `groupName` varchar(100) NOT NULL,
   `groupFlags` int unsigned NOT NULL DEFAULT '0',
   PRIMARY KEY (`groupId`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --

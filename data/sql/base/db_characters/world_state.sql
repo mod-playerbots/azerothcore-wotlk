@@ -24,7 +24,7 @@ CREATE TABLE `world_state` (
   `Id` int unsigned NOT NULL COMMENT 'Internal save ID',
   `Data` longtext,
   PRIMARY KEY (`Id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='WorldState save system';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='WorldState save system';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --

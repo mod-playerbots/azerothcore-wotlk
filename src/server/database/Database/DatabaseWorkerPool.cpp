@@ -63,13 +63,8 @@ DatabaseWorkerPool<T>::DatabaseWorkerPool() :
 {
     WPFatal(mysql_thread_safe(), "Used MySQL library isn't thread-safe.");
 
-    bool isSupportClientDB = mysql_get_client_version() >= MIN_MYSQL_CLIENT_VERSION;
-    bool isSameClientDB = mysql_get_client_version() == MYSQL_VERSION_ID;
-
-    WPFatal(isSupportClientDB, "AzerothCore does not support MySQL versions below 8.0\n\nFound version: {} / {}. Server compiled with: {}.\nSearch the wiki for ACE00043 in Common Errors (https://www.azerothcore.org/wiki/common-errors#ace00043).",
-        mysql_get_client_info(), mysql_get_client_version(), MYSQL_VERSION_ID);
-    WPFatal(isSameClientDB, "Used MySQL library version ({} id {}) does not match the version id used to compile AzerothCore (id {}).\nSearch the wiki for ACE00046 in Common Errors (https://www.azerothcore.org/wiki/common-errors#ace00046).",
-        mysql_get_client_info(), mysql_get_client_version(), MYSQL_VERSION_ID);
+    bool isSupportClientDB = true;
+    bool isSameClientDB = true;
 }
 
 template <class T>
@@ -390,32 +385,7 @@ void DatabaseWorkerPool<T>::KeepAlive()
 */
 bool DatabaseIncompatibleVersion(std::string const mysqlVersion)
 {
-    // anon func to turn a version string into an array of uint8
-    // "1.2.3" => [1, 2, 3]
-    auto parse = [](std::string const& input)
-    {
-        std::vector<uint8> result;
-        std::istringstream parser(input);
-        result.push_back(parser.get());
-        for (int i = 1; i < 3; i++)
-        {
-            // Skip period
-            parser.get();
-            // Append int from parser to output
-            result.push_back(parser.get());
-        }
-        return result;
-    };
-
-    // default to values for MySQL
-    uint8 offset = 0;
-    std::string minVersion = MIN_MYSQL_SERVER_VERSION;
-
-    auto parsedMySQLVersion = parse(mysqlVersion.substr(offset));
-    auto parsedMinVersion = parse(minVersion);
-
-    return std::lexicographical_compare(parsedMySQLVersion.begin(), parsedMySQLVersion.end(),
-                                        parsedMinVersion.begin(), parsedMinVersion.end());
+    return false;
 }
 
 template <class T>

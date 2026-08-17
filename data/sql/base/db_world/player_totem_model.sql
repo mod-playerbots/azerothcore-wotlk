@@ -25,7 +25,7 @@ CREATE TABLE `player_totem_model` (
   `RaceID` tinyint unsigned NOT NULL,
   `ModelID` int unsigned NOT NULL,
   PRIMARY KEY (`TotemID`,`RaceID`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci PACK_KEYS=0;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci PACK_KEYS=0;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --

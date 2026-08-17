@@ -1,4 +1,23 @@
 version: '3.8'
-# services:
-#   ac-worldserver-2:
-
+services:
+  ac-llm-chatter-bridge:
+    container_name: ac-llm-chatter-bridge
+    image: python:3.11-slim
+    networks:
+      - ac-network
+    working_dir: /app
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: >
+      bash -c "
+        pip install --quiet -r /app/requirements.txt &&
+        python llm_chatter_bridge.py --config /config/mod_llm_chatter.conf
+      "
+    volumes:
+      - ./modules/mod-llm-chatter/tools:/app:ro
+      - ./env/dist/etc/modules:/config:ro
+    restart: unless-stopped
+    depends_on:
+      ac-database:
+        condition: service_healthy
+    profiles: [dev]

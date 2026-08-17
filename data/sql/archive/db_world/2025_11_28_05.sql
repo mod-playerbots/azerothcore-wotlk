@@ -1,5 +1,5 @@
 -- DB update 2025_11_28_04 -> 2025_11_28_05
-ALTER TABLE `spell_group` DROP `special_flag`;
+ALTER TABLE `spell_group` DROP COLUMN IF EXISTS `special_flag`;
 ALTER TABLE `spell_group` MODIFY COLUMN `spell_id` int;
 
 -- import from trinitycore
@@ -211,4 +211,4 @@ INSERT INTO `spell_group_stack_rules` (`group_id`,`stack_rule`, `description`) V
 (1126, 3, 'Stamina Buffs');
 
 DELETE FROM `spell_script_names` WHERE `spell_id` IN (18735, 56246, 56247);
-INSERT INTO `spell_script_names` VALUES (18735, 'spell_warl_voidwalker_pet_passive'); 
+INSERT INTO `spell_script_names` VALUES (18735, 'spell_warl_voidwalker_pet_passive');

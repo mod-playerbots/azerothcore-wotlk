@@ -24,7 +24,7 @@ CREATE TABLE `spell_cone` (
   `ID` int unsigned NOT NULL COMMENT 'Spell ID',
   `ConeDegrees` smallint NOT NULL DEFAULT '60' COMMENT 'Cone angle in degrees',
   PRIMARY KEY (`ID`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
