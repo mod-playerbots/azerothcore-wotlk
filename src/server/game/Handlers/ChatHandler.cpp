@@ -448,9 +448,6 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
                 if (receiver->GetSession()->IsTrialAccount() && !receiver->IsInWhisperWhiteList(sender->GetGUID()))
                     receiver->AddWhisperWhiteList(sender->GetGUID());
 
-                if (!sScriptMgr->OnPlayerCanUseChat(sender, type, lang, msg, receiver))
-                    return;
-
                 GetPlayer()->Whisper(msg, Language(lang), receiver);
             }
             break;
