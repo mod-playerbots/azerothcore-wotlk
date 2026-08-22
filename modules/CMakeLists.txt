@@ -376,9 +376,9 @@ target_compile_options(modules
     -DCONFIG_FILE_LIST=$<1:"${CONFIG_LIST}">)
 
 if (MOD_PLAYERBOTS_FOUND)
-    target_compile_options(modules
-            PRIVATE
-            -DMOD_PLAYERBOTS)
+  target_compile_options(modules
+    PRIVATE
+      -DMOD_PLAYERBOTS)
 endif()
 
 if (MOD_ALE_FOUND)
