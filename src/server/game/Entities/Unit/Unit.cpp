@@ -7295,7 +7295,6 @@ ReputationRank Unit::GetFactionReactionTo(FactionTemplateEntry const* factionTem
         return REP_FRIENDLY;
     if (factionTemplateEntry->factionFlags & FACTION_TEMPLATE_FLAG_HATES_ALL_EXCEPT_FRIENDS)
         return REP_HOSTILE;
-
     // neutral by default
     return REP_NEUTRAL;
 }
@@ -12619,7 +12618,7 @@ void Unit::CleanupBeforeRemoveFromMap(bool finalCleanup)
         RemoveFromWorld();
 
     // Added for mod_playerbots crash fixes; cancel and remove pending events before aura/spellmod cleanup.
-    // Without this SpellEvent may be cancelled later during EventProcessor destruction after auras/spellmods 
+    // Without this SpellEvent may be cancelled later during EventProcessor destruction after auras/spellmods
     // are already removed and leading to invalid access in Player::RestoreSpellMods on logout.
     m_Events.KillAllEvents(false);
 

@@ -77,7 +77,7 @@ mmapsConfig:
     verticesPerMapEdge: 2000
 
     # Number of vertices along one edge of each tile chunk.
-    # Must divide (verticesPerMapEdge - 1) evenly for seamless tiles.
+    # Must divide (vertexPerMapEdge - 1) evenly for seamless tiles.
     # A higher vertex count per tile means fewer total tiles,
     # reducing runtime work to load, unload, and manage tiles.
     verticesPerTileEdge: 80

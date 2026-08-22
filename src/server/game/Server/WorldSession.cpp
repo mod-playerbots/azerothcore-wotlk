@@ -162,9 +162,7 @@ WorldSession::WorldSession(uint32 id, std::string&& name, uint32 accountFlags, s
         LoginDatabase.Execute("UPDATE account SET online = 1 WHERE id = {};", GetAccountId()); // One-time query
     }
     else if (isBot)
-    {
         m_Address = "bot";
-    }
 }
 
 /// WorldSession destructor

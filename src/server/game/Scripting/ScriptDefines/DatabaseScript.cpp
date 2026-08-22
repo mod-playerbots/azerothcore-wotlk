@@ -27,9 +27,7 @@ bool ScriptMgr::OnDatabasesLoading()
     });
 
     if (ret && *ret)
-    {
         return false;
-    }
 
     return true;
 }

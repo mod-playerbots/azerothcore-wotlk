@@ -436,9 +436,7 @@ void ChatHandler::BuildChatPacket(WorldPacket& data, ChatMsg msgtype, std::strin
             }
 
             if (msgtype == CHAT_MSG_CHANNEL)
-            {
                 data << channelName;
-            }
             data << ObjectGuid(targetGuid);
             break;
     }

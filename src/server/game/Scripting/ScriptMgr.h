@@ -751,7 +751,7 @@ public: /* LootScript */
     void OnLootMoney(Player* player, uint32 gold);
 
 public: /* PlayerbotScript */
-    
+
     bool OnPlayerbotCheckLFGQueue(lfg::Lfg5Guids const& guidsList);
     void OnPlayerbotCheckKillTask(Player* player, Unit* victim);
     void OnPlayerbotCheckPetitionAccount(Player* player, bool& found);
