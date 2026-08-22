@@ -113,8 +113,6 @@ protected:
     PlayerbotScript(const char* name);
 
 public:
-    bool IsDatabaseBound() const { return false; }
-
     [[nodiscard]] virtual bool OnPlayerbotCheckLFGQueue(lfg::Lfg5Guids const& /*guidsList*/) { return true; }
     virtual void OnPlayerbotCheckKillTask(Player* /*player*/, Unit* /*victim*/) { }
     virtual void OnPlayerbotCheckPetitionAccount(Player* /*player*/, bool& /*found*/) { }
@@ -126,6 +124,7 @@ public:
     virtual void OnPlayerbotLogoutBots() { }
 };
 
+// Manages registration, loading, and execution of scripts.
 class ScriptMgr
 {
     friend class ScriptObject;
