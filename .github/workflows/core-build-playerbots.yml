@@ -1,12 +1,14 @@
-# This starter workflow is for a CMake project running on multiple platforms. There is a different starter workflow if you just want a single platform.
-# See: https://github.com/actions/starter-workflows/blob/main/ci/cmake-single-platform.yml
 name: ubuntu-build
 
 on:
   push:
-    branches: [ "Playerbot", "test-staging" ]
+    branches:
+      - 'Playerbot'
+      - 'test-staging'
   pull_request:
-    branches: [ "Playerbot", "test-staging" ]
+    branches:
+      - 'Playerbot'
+      - 'test-staging'
 
 jobs:
   build:
@@ -28,6 +30,7 @@ jobs:
             build_type: Release
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.os }}-${{ matrix.cpp_compiler }}
+    if: github.repository == 'mod-playerbots/azerothcore-wotlk' && !github.event.pull_request.draft
 
     steps:
       - name: Checkout AzerothCore

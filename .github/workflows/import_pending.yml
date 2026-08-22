@@ -3,41 +3,47 @@ on:
   push:
     branches:
       - master
-      - test-staging   # add this if you want pending SQL imported on this branch too
 
 jobs:
   import-pending:
     strategy:
       fail-fast: false
     runs-on: ubuntu-24.04
-    permissions:
-      contents: write  # 'write-all' is not a valid permission, should specify what is needed
+    permissions: write-all
     if: github.repository == 'azerothcore/azerothcore-wotlk' && !github.event.pull_request.draft
     steps:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
+          # If we're fetching all the history in a later step it makes sense to
+          # pre-load it now
           fetch-depth: 0
           ref: ${{ github.ref_name }}
 
       - uses: denoland/setup-deno@v1
         with:
+          # Specifies latest 1.x
           deno-version: "~1.0"
 
       - name: Import and commit pending sql
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
+          # Get the latest changes from git
           git pull --rebase origin "${{ github.ref_name }}"
           bash bin/acore-db-pendings
           deno run --allow-all --unstable apps/ci/ci-pending-changelogs.ts
           git add -A .
           git commit -am "chore(DB): import pending files" -m "Referenced commit(s): ${GITHUB_SHA}" || true
         env:
+          # Noting that the branch name can only be master, as per the event
+          # triggering this action
           BRANCH: ${{ github.ref_name }}
 
       - name: Push changes
         uses: ad-m/github-push-action@master
         with:
           github_token: ${{ secrets.AC_GITHUB_TOKEN }}
+          # Noting that the branch name can only be master, as per the event
+          # triggering this action
           branch: ${{ github.ref_name }}

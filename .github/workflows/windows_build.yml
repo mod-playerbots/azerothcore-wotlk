@@ -1,10 +1,13 @@
 name: windows-build
-
 on:
   push:
-    branches: [ "Playerbot", "test-staging" ]
+    branches:
+      - 'Playerbot'
+      - 'test-staging'
   pull_request:
-    branches: [ "Playerbot", "test-staging" ]
+    branches:
+      - 'Playerbot'
+      - 'test-staging'
 
 concurrency:
   # One concurrency group per workflow + ref.
@@ -26,6 +29,7 @@ jobs:
         os: [windows-latest]
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.os }}
+    if: github.repository == 'mod-playerbots/azerothcore-wotlk' && !github.event.pull_request.draft
     env:
       BOOST_ROOT: C:\local\boost_1_87_0
     steps:

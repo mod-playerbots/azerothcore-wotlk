@@ -1,5 +1,4 @@
 name: nopch-build
-
 on:
   push:
     branches:
@@ -55,4 +54,4 @@ jobs:
           CC: ${{ matrix.compiler.CC }}
           CXX: ${{ matrix.compiler.CXX }}
           pch: false
-          modules: true  # optional: include module compilation if desired
+          modules: true
