@@ -311,7 +311,9 @@ void WorldSession::SendPacket(WorldPacket const* packet)
         return;
     }
 
+#ifdef MOD_PLAYERBOTS
     sScriptMgr->OnPlayerbotPacketSent(GetPlayer(), packet);
+#endif
 
     if (!m_Socket)
         return;

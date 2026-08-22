@@ -1370,7 +1370,7 @@ inline constexpr uint64 IMMUNE_TO_MOVEMENT_IMPAIRMENT_AND_LOSS_CONTROL_MASK =
     (1ULL << MECHANIC_SAPPED);
 
 // Spell dispel type
-enum DispelType : uint8
+enum DispelType
 {
     DISPEL_NONE         = 0,
     DISPEL_MAGIC        = 1,
