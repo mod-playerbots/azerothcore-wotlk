@@ -30,8 +30,8 @@
 #include "DatabaseEnv.h"
 #include "Duration.h"
 #include "GossipDef.h"
-#include "QueryHolder.h"
 #include "Packet.h"
+#include "QueryHolder.h"
 #include "SharedDefines.h"
 #include "World.h"
 #include <map>
@@ -292,16 +292,16 @@ enum CharterTypes
 
 class LoginQueryHolder : public CharacterDatabaseQueryHolder
 {
-    private:
-        uint32 m_accountId;
-        ObjectGuid m_guid;
+private:
+    uint32 m_accountId;
+    ObjectGuid m_guid;
+public:
+    LoginQueryHolder(uint32 accountId, ObjectGuid guid)
+        : m_accountId(accountId), m_guid(guid) { }
 
-    public:
-        LoginQueryHolder(uint32 accountId, ObjectGuid guid);
-
-        ObjectGuid GetGuid() const { return m_guid; }
-        uint32 GetAccountId() const { return m_accountId; }
-        bool Initialize();
+    ObjectGuid GetGuid() const { return m_guid; }
+    uint32 GetAccountId() const { return m_accountId; }
+    bool Initialize();
 };
 
 constexpr Seconds PLAY_TIME_LIMIT_APPROACHING_PARTIAL = Hours(2) + Minutes(30);

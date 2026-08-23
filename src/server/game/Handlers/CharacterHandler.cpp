@@ -63,8 +63,6 @@
 #include "WorldSession.h"
 #include "WorldSessionMgr.h"
 
-LoginQueryHolder::LoginQueryHolder(uint32 accountId, ObjectGuid guid) : m_accountId(accountId), m_guid(guid) { }
-
 bool LoginQueryHolder::Initialize()
 {
     SetSize(MAX_PLAYER_LOGIN_QUERY);
