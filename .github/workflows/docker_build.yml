@@ -2,11 +2,12 @@ name: docker-build
 on:
   push:
     branches:
-      - 'master'
+      - 'Playerbot'
+      - 'test-staging'
   pull_request:
-    types:
-      - labeled
-      - synchronize
+    branches:
+      - 'Playerbot'
+      - 'test-staging'
 
 concurrency:
   # One concurrency group per workflow + ref.
@@ -23,16 +24,15 @@ concurrency:
 env:
   COMPOSE_DOCKER_CLI_BUILD: 1
   DOCKER_BUILDKIT: 1
+  # Playerbots: Leave this as azerothcore/azerothcore-wotlk. It feeds `push:` on every docker
+  # build step, so leaving it on azerothcore is what keeps image publishing off from mod-playerbots.
   RUNNING_ON_PRIMARY_BRANCH: |
-    ${{ (github.repository == 'mod-playerbots/azerothcore-wotlk' && github.ref_name == 'master') && 'true' || 'false' }}
+    ${{ (github.repository == 'azerothcore/azerothcore-wotlk' && github.ref_name == 'master') && 'true' || 'false' }}
 
 jobs:
   build-containers:
     runs-on: "ubuntu-latest"
-    if: |
-      github.repository == 'mod-playerbots/azerothcore-wotlk'
-      && !github.event.pull_request.draft
-      && (github.ref_name == 'master' || contains(github.event.pull_request.labels.*.name, 'run-build') || github.event.label.name == 'run-build')
+    if: github.repository == 'mod-playerbots/azerothcore-wotlk' && !github.event.pull_request.draft
     steps:
       - name: Free up disk space
         run: |

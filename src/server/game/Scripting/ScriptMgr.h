@@ -113,8 +113,6 @@ protected:
     PlayerbotScript(const char* name);
 
 public:
-    bool IsDatabaseBound() const { return false; }
-
     [[nodiscard]] virtual bool OnPlayerbotCheckLFGQueue(lfg::Lfg5Guids const& /*guidsList*/) { return true; }
     virtual void OnPlayerbotCheckKillTask(Player* /*player*/, Unit* /*victim*/) { }
     virtual void OnPlayerbotCheckPetitionAccount(Player* /*player*/, bool& /*found*/) { }
@@ -126,6 +124,7 @@ public:
     virtual void OnPlayerbotLogoutBots() { }
 };
 
+// Manages registration, loading, and execution of scripts.
 class ScriptMgr
 {
     friend class ScriptObject;
@@ -731,7 +730,6 @@ public: /* DatabaseScript */
     void OnDatabasesKeepAlive();
     void OnDatabasesClosing();
     void OnDatabaseWarnAboutSyncQueries(bool apply);
-    void OnDatabaseSelectIndexLogout(Player* player, uint32& statementIndex, uint32& statementParam);
     void OnDatabaseGetDBRevision(std::string& revision);
 
 public: /* WorldObjectScript */
@@ -751,7 +749,7 @@ public: /* LootScript */
     void OnLootMoney(Player* player, uint32 gold);
 
 public: /* PlayerbotScript */
-    
+
     bool OnPlayerbotCheckLFGQueue(lfg::Lfg5Guids const& guidsList);
     void OnPlayerbotCheckKillTask(Player* player, Unit* victim);
     void OnPlayerbotCheckPetitionAccount(Player* player, bool& found);

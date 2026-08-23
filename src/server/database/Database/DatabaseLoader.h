@@ -61,11 +61,6 @@ public:
         return _updateFlags;
     }
 
-    void SetUpdateFlags(uint32 newUpdateFlags)
-    {
-        _updateFlags |= newUpdateFlags;
-    }
-
 private:
     bool OpenDatabases();
     bool PopulateDatabases();
@@ -82,7 +77,7 @@ private:
     std::string const _logger;
     std::string_view _modulesList;
     bool const _autoSetup;
-    uint32 _updateFlags;
+    uint32 const _updateFlags;
 
     std::queue<Predicate> _open, _populate, _update, _prepare;
     std::stack<Closer> _close;

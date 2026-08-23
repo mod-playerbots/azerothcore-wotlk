@@ -349,9 +349,9 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
             msg.erase(end, msg.end());
         }
 
-        // mod_playerbots: skip validation for playerbots module
-        auto playerbotsHyperlink = msg.find("Hfound:") != std::string::npos;
-        if (!playerbotsHyperlink)
+        // Playerbots: skip validation for bots.
+        // "Hfound" is a bot's link to a world object, sent back by players to command the bot.
+        if (!IsBot() && msg.find("Hfound:") == std::string::npos)
         {
             // Validate hyperlinks
             if (!ValidateHyperlinksAndMaybeKick(msg))

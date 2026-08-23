@@ -442,9 +442,7 @@ bool StartDB()
         return false;
 
     if (!sScriptMgr->OnDatabasesLoading())
-    {
         return false;
-    }
 
     ///- Get the realm Id from the configuration file
     realm.Id.Realm = sConfigMgr->GetOption<uint32>("RealmID", 1);

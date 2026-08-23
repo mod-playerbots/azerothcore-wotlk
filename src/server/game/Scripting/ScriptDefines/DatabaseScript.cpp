@@ -27,9 +27,7 @@ bool ScriptMgr::OnDatabasesLoading()
     });
 
     if (ret && *ret)
-    {
         return false;
-    }
 
     return true;
 }
@@ -65,14 +63,6 @@ void ScriptMgr::OnDatabaseWarnAboutSyncQueries(bool apply)
     ExecuteScript<DatabaseScript>([&](DatabaseScript* script)
     {
         script->OnDatabaseWarnAboutSyncQueries(apply);
-    });
-}
-
-void ScriptMgr::OnDatabaseSelectIndexLogout(Player* player, uint32& statementIndex, uint32& statementParam)
-{
-    ExecuteScript<DatabaseScript>([&](DatabaseScript* script)
-    {
-        script->OnDatabaseSelectIndexLogout(player, statementIndex, statementParam);
     });
 }
 

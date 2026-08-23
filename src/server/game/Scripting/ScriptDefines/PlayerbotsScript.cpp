@@ -26,9 +26,7 @@ bool ScriptMgr::OnPlayerbotCheckLFGQueue(lfg::Lfg5Guids const& guidsList)
     });
 
     if (ret && *ret)
-    {
         return false;
-    }
 
     return true;
 }
@@ -57,9 +55,7 @@ bool ScriptMgr::OnPlayerbotCheckUpdatesToSend(Player* player)
     });
 
     if (ret && *ret)
-    {
         return false;
-    }
 
     return true;
 }
