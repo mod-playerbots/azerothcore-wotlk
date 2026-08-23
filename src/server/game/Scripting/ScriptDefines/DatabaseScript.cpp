@@ -66,14 +66,6 @@ void ScriptMgr::OnDatabaseWarnAboutSyncQueries(bool apply)
     });
 }
 
-void ScriptMgr::OnDatabaseSelectIndexLogout(Player* player, uint32& statementIndex, uint32& statementParam)
-{
-    ExecuteScript<DatabaseScript>([&](DatabaseScript* script)
-    {
-        script->OnDatabaseSelectIndexLogout(player, statementIndex, statementParam);
-    });
-}
-
 void ScriptMgr::OnDatabaseGetDBRevision(std::string& revision)
 {
     ExecuteScript<DatabaseScript>([&](DatabaseScript* script)

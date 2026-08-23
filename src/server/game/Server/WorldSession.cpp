@@ -862,9 +862,10 @@ void WorldSession::LogoutPlayer(bool save, bool redirecting)
         LOG_INFO("entities.player", "Account: {} (IP: {}) Logout Character:[{}] ({}) Level: {}",
             GetAccountId(), GetRemoteAddress(), _player->GetName(), _player->GetGUID().ToString(), _player->GetLevel());
 
-        uint32 statementIndex = CHAR_UPD_ACCOUNT_ONLINE;
-        uint32 statementParam = GetAccountId();
-        sScriptMgr->OnDatabaseSelectIndexLogout(_player, statementIndex, statementParam);
+        // Playerbots: bots share an account, so only this character goes offline. Read here
+        // because _player is destroyed before the statement below runs.
+        bool const isBot = IsBot();
+        uint32 const characterGuid = isBot ? _player->GetGUID().GetCounter() : 0;
 
         //! Remove the player from the world
         // the player may not be in the world when logging out
@@ -887,8 +888,8 @@ void WorldSession::LogoutPlayer(bool save, bool redirecting)
         //! Since each account can only have one online character at any given time, ensure all characters for active account are marked as offline
         if (!redirecting)
         {
-            CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CharacterDatabaseStatements(statementIndex));
-            stmt->SetData(0, statementParam);
+            CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(isBot ? CHAR_UPD_CHAR_OFFLINE : CHAR_UPD_ACCOUNT_ONLINE);
+            stmt->SetData(0, isBot ? characterGuid : GetAccountId());
             CharacterDatabase.Execute(stmt);
         }
     }
