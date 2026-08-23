@@ -238,8 +238,8 @@ enum GuildMemberFlags
 class EmblemInfo
 {
 public:
-    EmblemInfo(uint32 /*style*/ = 0, uint32 /*color*/ = 0, uint32 /*borderStyle*/ = 0, uint32 /*borderColor*/ = 0, uint32 /*backgroundColor*/ = 0) :
-        m_style(0), m_color(0), m_borderStyle(0), m_borderColor(0), m_backgroundColor(0) { }
+    EmblemInfo(uint32 style = 0, uint32 color = 0, uint32 borderStyle = 0, uint32 borderColor = 0, uint32 backgroundColor = 0) :
+        m_style(style), m_color(color), m_borderStyle(borderStyle), m_borderColor(borderColor), m_backgroundColor(backgroundColor) { }
 
     void LoadFromDB(Field* fields);
     void SaveToDB(uint32 guildId) const;
@@ -698,7 +698,6 @@ public:
     void HandleSetMOTD(WorldSession* session, std::string_view motd);
     void HandleSetInfo(WorldSession* session, std::string_view info);
     void HandleSetEmblem(WorldSession* session, EmblemInfo const& emblemInfo);
-    void HandleSetEmblem(EmblemInfo const& emblemInfo);
     void HandleSetLeader(WorldSession* session, std::string_view name);
     void HandleSetBankTabInfo(WorldSession* session, uint8 tabId, std::string_view name, std::string_view icon);
     void HandleSetMemberNote(WorldSession* session, std::string_view name, std::string_view note, bool isPublic);
@@ -782,9 +781,10 @@ public:
     [[nodiscard]] bool ModifyBankMoney(CharacterDatabaseTransaction trans, uint64 const& amount, bool add) { return _ModifyBankMoney(trans, amount, add); }
     [[nodiscard]] uint32 GetMemberSize() const { return m_members.size(); }
 
-    bool MemberHasTabRights(ObjectGuid guid, uint8 tabId, uint32 rights) const;
-    bool HasRankRight(Player* player, uint32 right) const;
-    uint32 GetRankRights(uint8 rankId) const;
+    // Playerbots: public access to the rights helpers, which stay private below.
+    [[nodiscard]] bool HasRankRight(Player* player, uint32 right) const;
+    [[nodiscard]] bool MemberHasTabRights(ObjectGuid guid, uint8 tabId, uint32 rights) const;
+    [[nodiscard]] uint32 GetRankRights(uint8 rankId) const;
 
 protected:
     uint32 m_id;
@@ -810,6 +810,13 @@ private:
     inline uint8 _GetRanksSize() const { return uint8(m_ranks.size()); }
     inline RankInfo const* GetRankInfo(uint8 rankId) const { return rankId < _GetRanksSize() ? &m_ranks[rankId] : nullptr; }
     inline RankInfo* GetRankInfo(uint8 rankId) { return rankId < _GetRanksSize() ? &m_ranks[rankId] : nullptr; }
+    inline bool _HasRankRight(Player* player, uint32 right) const
+    {
+        if (player)
+            if (Member const* member = GetMember(player->GetGUID()))
+                return (_GetRankRights(member->GetRankId()) & right) != GR_RIGHT_EMPTY;
+        return false;
+    }
 
     inline uint8 _GetLowestRankId() const { return uint8(m_ranks.size() - 1); }
 
@@ -840,6 +847,7 @@ private:
     void _SetRankBankMoneyPerDay(uint8 rankId, uint32 moneyPerDay);
     void _SetRankBankTabRightsAndSlots(uint8 rankId, GuildBankRightsAndSlots rightsAndSlots, bool saveToDB = true);
     int8 _GetRankBankTabRights(uint8 rankId, uint8 tabId) const;
+    uint32 _GetRankRights(uint8 rankId) const;
     int32 _GetRankBankMoneyPerDay(uint8 rankId) const;
     int32 _GetRankBankTabSlotsPerDay(uint8 rankId, uint8 tabId) const;
     std::string _GetRankName(uint8 rankId) const;
@@ -847,6 +855,7 @@ private:
     int32 _GetMemberRemainingSlots(Member const& member, uint8 tabId) const;
     int32 _GetMemberRemainingMoney(Member const& member) const;
     void _UpdateMemberWithdrawSlots(CharacterDatabaseTransaction trans, ObjectGuid guid, uint8 tabId);
+    bool _MemberHasTabRights(ObjectGuid guid, uint8 tabId, uint32 rights) const;
 
     void _LogEvent(GuildEventLogTypes eventType, ObjectGuid playerGuid1, ObjectGuid playerGuid2 = ObjectGuid::Empty, uint8 newRank = 0);
     void _LogBankEvent(CharacterDatabaseTransaction trans, GuildBankEventLogTypes eventType, uint8 tabId, ObjectGuid playerGuid, uint32 itemOrMoney, uint16 itemStackCount = 0, uint8 destTabId = 0);
