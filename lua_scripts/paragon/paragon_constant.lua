@@ -383,8 +383,7 @@ return {
         -- Custom aura IDs for special bonuses like loot, reputation, and experience
         AURA = {
             LOOT                    = 1900000,
-            REPUTATION              = 1900001,
-            EXPERIENCE              = 1900002
+            REPUTATION              = 1900001
         }
     }
 }

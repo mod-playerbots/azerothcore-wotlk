@@ -415,12 +415,12 @@ void WorldSession::HandleAuctionPlaceBid(WorldPacket &recvData)
         return;
     }
 
-    Creature* creature = GetPlayer()->GetNPCIfCanInteractWith(auctioneer, UNIT_NPC_FLAG_AUCTIONEER);
-    if (!creature)
-    {
-        LOG_DEBUG("network", "WORLD: HandleAuctionPlaceBid - Unit ({}) not found or you can't interact with him.", auctioneer.ToString());
-        return;
-    }
+    // Remote auction house support (Lua SendAuctionMenu passes the player itself as the
+    // "auctioneer"): the client sends the player's own GUID here, which is not a
+    // Creature, so the stock GetNPCIfCanInteractWith(...AUCTIONEER) check would fail and
+    // silently block every bid/buyout. The auction house below is resolved from the
+    // player's faction, not the auctioneer, so the NPC lookup is not needed. Keep in sync
+    // with the same removal in HandleAuctionSellItem / the List handlers.
 
     // remove fake death
     if (GetPlayer()->HasUnitState(UNIT_STATE_DIED))
@@ -573,12 +573,10 @@ void WorldSession::HandleAuctionRemoveItem(WorldPacket &recvData)
         return;
     }
 
-    Creature* creature = GetPlayer()->GetNPCIfCanInteractWith(auctioneer, UNIT_NPC_FLAG_AUCTIONEER);
-    if (!creature)
-    {
-        LOG_DEBUG("network", "WORLD: HandleAuctionRemoveItem - Unit ({}) not found or you can't interact with him.", auctioneer.ToString());
-        return;
-    }
+    // Remote auction house support: the "auctioneer" is the player's own GUID (see the
+    // note in HandleAuctionPlaceBid), so the stock NPC interaction check would block
+    // cancelling your own auctions remotely. The auction house is resolved from the
+    // player's faction below, so the NPC lookup is unnecessary.
 
     // remove fake death
     if (GetPlayer()->HasUnitState(UNIT_STATE_DIED))

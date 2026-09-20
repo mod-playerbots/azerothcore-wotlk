@@ -12075,38 +12075,6 @@ void Player::learnSkillRewardedSpells(uint32 skill_id, uint32 skill_value)
     uint32 raceMask  = getRaceMask();
     uint32 classMask = getClassMask();
 
-    
-    QueryResult result = CharacterDatabase.Query("SELECT spells FROM character_classless WHERE GUID = {}", GetGUID().GetRawValue());
-    std::vector<uint32_t> spells;
-
-    if (result)
-    {
-        std::string fields = result->Fetch()[0].Get<std::string>();
-
-        // Split the string by commas
-        std::istringstream ss(fields);
-        std::string token;
-
-        while (std::getline(ss, token, ','))
-        {
-            try
-            {
-                uint32_t spell = static_cast<uint32_t>(std::stoul(token));
-                spells.push_back(spell);
-            }
-            catch (const std::invalid_argument& e)
-            {
-                std::cerr << "Invalid number: " << token << std::endl;
-            }
-            catch (const std::out_of_range& e)
-            {
-                std::cerr << "Number out of range: " << token << std::endl;
-            }
-        }
-    }
-
-  
-
     // Get all abilities for this skill and sort by MinSkillLineRank (lowest to highest)
     auto abilities = GetSkillLineAbilitiesBySkillLine(skill_id);
     std::vector<SkillLineAbilityEntry const*> sortedAbilities(abilities.begin(), abilities.end());
@@ -12169,7 +12137,10 @@ void Player::learnSkillRewardedSpells(uint32 skill_id, uint32 skill_value)
             }
 
 
-            if (std::find(spells.begin(), spells.end(), pAbility->Spell) == spells.end() && pAbility->ClassMask) {
+            // ClassLess: class-restricted skill-line abilities are no longer auto-granted here --
+            // reading the matching tome is the only path to learning them.
+            if (pAbility->ClassMask)
+            {
                 continue;
             }
 
@@ -13878,27 +13849,32 @@ void Player::_LoadSkills(PreparedQueryResult result)
             SkillRaceClassInfoEntry const* rcEntry = GetSkillRaceClassInfo(skill, getRace(), getClass());
             if (!rcEntry)
             {
-                LOG_ERROR("entities.player", "Player {} (GUID: {}), has skill ({}) that is invalid for the race/class combination (Race: {}, Class: {}). Will be deleted.",
+                // ClassLess: this server intentionally lets characters earn proficiency
+                // skills their native race/class has no SkillRaceClassInfo entry for
+                // (e.g. a Mage with Mail Armor). The stock check below would otherwise
+                // wipe those rows on every single login, before ClassLess's OnLogin
+                // handler gets a chance to re-grant them - which also silently unequips
+                // any gear relying on that skill via _LoadInventory's later proficiency
+                // check. Keep the DB-loaded value/max as-is instead of deleting.
+                LOG_DEBUG("entities.player", "Player {} (GUID: {}) has skill ({}) with no SkillRaceClassInfo for race/class ({}, {}); keeping (classless server).",
                     GetName(), GetGUID().GetCounter(), skill, getRace(), getClass());
-
-                // Mark skill for deletion in the database
-                mSkillStatus.insert(SkillStatusMap::value_type(skill, SkillStatusData(0, SKILL_DELETED)));
-                continue;
             }
-
-            // set fixed skill ranges
-            switch (GetSkillRangeType(rcEntry))
+            else
             {
-                case SKILL_RANGE_LANGUAGE:                      // 300..300
-                    value = max = 300;
-                    break;
-                case SKILL_RANGE_MONO:                          // 1..1, grey monolite bar
-                    value = max = 1;
-                    break;
-                case SKILL_RANGE_LEVEL:
-                    max = GetMaxSkillValueForLevel();
-                default:
-                    break;
+                // set fixed skill ranges
+                switch (GetSkillRangeType(rcEntry))
+                {
+                    case SKILL_RANGE_LANGUAGE:                      // 300..300
+                        value = max = 300;
+                        break;
+                    case SKILL_RANGE_MONO:                          // 1..1, grey monolite bar
+                        value = max = 1;
+                        break;
+                    case SKILL_RANGE_LEVEL:
+                        max = GetMaxSkillValueForLevel();
+                    default:
+                        break;
+                }
             }
 
             if (value == 0)
@@ -13917,14 +13893,17 @@ void Player::_LoadSkills(PreparedQueryResult result)
             }
 
             uint16 skillStep = 0;
-            if (SkillTiersEntry const* skillTier = sSkillTiersStore.LookupEntry(rcEntry->SkillTierID))
+            if (rcEntry)
             {
-                for (uint32 i = 0; i < MAX_SKILL_STEP; ++i)
+                if (SkillTiersEntry const* skillTier = sSkillTiersStore.LookupEntry(rcEntry->SkillTierID))
                 {
-                    if (skillTier->Value[skillStep] == max)
+                    for (uint32 i = 0; i < MAX_SKILL_STEP; ++i)
                     {
-                        skillStep = i + 1;
-                        break;
+                        if (skillTier->Value[skillStep] == max)
+                        {
+                            skillStep = i + 1;
+                            break;
+                        }
                     }
                 }
             }

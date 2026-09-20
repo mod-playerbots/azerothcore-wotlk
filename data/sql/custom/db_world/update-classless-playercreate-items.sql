@@ -26,12 +26,12 @@ CREATE TABLE IF NOT EXISTS `playercreateinfo_item` (
   KEY `playercreateinfo_race_class_index` (`race`,`class`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table acore_world.playercreateinfo_item: ~5 rows (approximately)
+-- Dumping data for table acore_world.playercreateinfo_item: ~2 rows (approximately)
 REPLACE INTO `playercreateinfo_item` (`race`, `class`, `itemid`, `amount`, `Note`) VALUES
-	(0, 6, 40582, -1, '[TDB PH] - unsused Scourgestone'),
-	(0, 11, 3661, 1, NULL),
-	(0, 11, 6123, 1, NULL),
-	(0, 11, 6124, 1, NULL);
+	(0, 6, 40582, -1, '[TDB PH] - unsused Scourgestone');
+-- Removed the (0, 11, 3661/6123/6124, 1, ...) rows: they duplicated the Handcrafted
+-- Staff / Novice's Robe / Novice's Pants already granted via CharStartOutfit.dbc for
+-- Druid, causing new characters to spawn with the outfit both equipped AND in bags.
 
 /*!40103 SET TIME_ZONE=IFNULL(@OLD_TIME_ZONE, 'system') */;
 /*!40101 SET SQL_MODE=IFNULL(@OLD_SQL_MODE, '') */;

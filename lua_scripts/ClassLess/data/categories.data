@@ -1,0 +1,116 @@
+--CATEGORIES
+-- Role category per spell, consumed by the category stacking tax in Client.lua.
+-- Owning several abilities from the SAME category costs progressively more: the
+-- overpowered routes on a classless server come from stacking redundant effects
+-- that were balanced assuming one character could never hold them all.
+--
+-- Only the rank-1 spell id is listed; the tax applies to the whole rank line.
+-- Add or retag ids freely -- anything not listed here is simply untaxed.
+
+if CLDB==nil then CLDB={} end
+if CLDB.categories==nil then CLDB.categories={} end
+
+CLDB.categories={
+    -- immunity: Full damage/spell immunities -- chaining these across classes gives ~a minute of unkillable.
+    [31224]="immunity", -- Cloak of Shadows
+    [19263]="immunity", -- Deterrence
+    [19752]="immunity", -- Divine Intervention
+    [642]="immunity", -- Divine Shield
+    [1022]="immunity", -- Hand of Protection
+    [45438]="immunity", -- Ice Block
+
+    -- defensive_cd: Damage-reduction cooldowns. They share no diminishing returns, so stacking them is multiplicative.
+    [22812]="defensive_cd", -- Barkskin
+    [47585]="defensive_cd", -- Dispersion
+    [498]="defensive_cd", -- Divine Protection
+    [5277]="defensive_cd", -- Evasion
+    [22842]="defensive_cd", -- Frenzied Regeneration
+    [47788]="defensive_cd", -- Guardian Spirit
+    [20925]="defensive_cd", -- Holy Shield
+    [12975]="defensive_cd", -- Last Stand
+    [33206]="defensive_cd", -- Pain Suppression
+    [2565]="defensive_cd", -- Shield Block
+    [871]="defensive_cd", -- Shield Wall
+    [61336]="defensive_cd", -- Survival Instincts
+
+    -- raid_buff: Raid buffs. Normally spread across five classes; one character collecting them all is the classic classless exploit.
+    [23028]="raid_buff", -- Arcane Brilliance
+    [1459]="raid_buff", -- Arcane Intellect
+    [6673]="raid_buff", -- Battle Shout
+    [20217]="raid_buff", -- Blessing of Kings
+    [19740]="raid_buff", -- Blessing of Might
+    [20911]="raid_buff", -- Blessing of Sanctuary
+    [19742]="raid_buff", -- Blessing of Wisdom
+    [469]="raid_buff", -- Commanding Shout
+    [14752]="raid_buff", -- Divine Spirit
+    [21849]="raid_buff", -- Gift of the Wild
+    [1126]="raid_buff", -- Mark of the Wild
+    [1243]="raid_buff", -- Power Word: Fortitude
+    [21562]="raid_buff", -- Prayer of Fortitude
+    [27681]="raid_buff", -- Prayer of Spirit
+    [19506]="raid_buff", -- Trueshot Aura
+
+    -- aoe_heal: AoE / amplified healing throughput. Beacon of Light duplicating Chain Heal is the worst offender.
+    [53563]="aoe_heal", -- Beacon of Light
+    [1064]="aoe_heal", -- Chain Heal
+    [34861]="aoe_heal", -- Circle of Healing
+    [64843]="aoe_heal", -- Divine Hymn
+    [15237]="aoe_heal", -- Holy Nova
+    [596]="aoe_heal", -- Prayer of Healing
+    [740]="aoe_heal", -- Tranquility
+    [48438]="aoe_heal", -- Wild Growth
+
+    -- mana_sustain: Mana return. Stacking several makes resources effectively infinite.
+    [54428]="mana_sustain", -- Divine Plea
+    [12051]="mana_sustain", -- Evocation
+    [64901]="mana_sustain", -- Hymn of Hope
+    [29166]="mana_sustain", -- Innervate
+    [53408]="mana_sustain", -- Judgement of Wisdom
+    [1454]="mana_sustain", -- Life Tap
+    [16190]="mana_sustain", -- Mana Tide Totem
+    [34433]="mana_sustain", -- Shadowfiend
+
+    -- burst_cd: Offensive burst cooldowns, including self-cast Bloodlust/Heroism (normally a raid-wide cooldown).
+    [13750]="burst_cd", -- Adrenaline Rush
+    [12042]="burst_cd", -- Arcane Power
+    [31884]="burst_cd", -- Avenging Wrath
+    [13877]="burst_cd", -- Blade Flurry
+    [2825]="burst_cd", -- Bloodlust
+    [11129]="burst_cd", -- Combustion
+    [12292]="burst_cd", -- Death Wish
+    [32182]="burst_cd", -- Heroism
+    [12472]="burst_cd", -- Icy Veins
+    [47241]="burst_cd", -- Metamorphosis
+    [16188]="burst_cd", -- Nature's Swiftness
+    [17116]="burst_cd", -- Nature's Swiftness
+    [12043]="burst_cd", -- Presence of Mind
+    [3045]="burst_cd", -- Rapid Fire
+    [1719]="burst_cd", -- Recklessness
+
+    -- mobility: Gap closers and speed bursts; stacking them makes a character impossible to kite or escape.
+    [1953]="mobility", -- Blink
+    [100]="mobility", -- Charge
+    [1850]="mobility", -- Dash
+    [20252]="mobility", -- Intercept
+    [3411]="mobility", -- Intervene
+    [2983]="mobility", -- Sprint
+    -- Added after auditing Spell.dbc. NOTE: some of these are already mutually
+    -- exclusive via locks.data (Sprint/Shadowstep, Dash/Feral Charge), so the tax
+    -- only bites across separate lock groups.
+    [5118]="mobility", -- Aspect of the Cheetah
+    [13159]="mobility", -- Aspect of the Pack
+    [2645]="mobility", -- Ghost Wolf
+    [36554]="mobility", -- Shadowstep
+    [1856]="mobility", -- Vanish
+    [16979]="mobility", -- Feral Charge - Bear
+    [49376]="mobility", -- Feral Charge - Cat
+
+    -- interrupt: Interrupts. Several on staggered cooldowns means permanent caster lockout.
+    [2139]="interrupt", -- Counterspell
+    [8042]="interrupt", -- Earth Shock
+    [1766]="interrupt", -- Kick
+    [6552]="interrupt", -- Pummel
+    [72]="interrupt", -- Shield Bash
+    [15487]="interrupt", -- Silence
+    [57994]="interrupt", -- Wind Shear
+}

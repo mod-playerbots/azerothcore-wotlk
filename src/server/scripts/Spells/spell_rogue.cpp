@@ -338,8 +338,19 @@ class spell_rog_killing_spree_aura : public AuraScript
                 GetTarget()->CastSpell(target, SPELL_ROGUE_KILLING_SPREE_TELEPORT, true);
 
                 // xinef: ensure fast coordinates switch, dont wait for client to send opcode
-                WorldLocation const& dest = GetTarget()->ToPlayer()->GetTeleportDest();
-                GetTarget()->ToPlayer()->UpdatePosition(dest, true);
+                //
+                // The ToPlayer() is null for any non-player caster, and this aura is reachable by
+                // one: ClassLess puts abilities on creatures (smart_scripts action 11), and a
+                // creature given Killing Spree crashes the worldserver here the moment the
+                // periodic ticks. Found 2026-09-15, when bots first fought above level 29 and
+                // 168 creatures were carrying it. The data side is guarded too -- npc_showcast.py
+                // keeps a PLAYER_ONLY blacklist -- but that guard lives in a generator, and this
+                // one cannot be regenerated away.
+                if (Player* player = GetTarget()->ToPlayer())
+                {
+                    WorldLocation const& dest = player->GetTeleportDest();
+                    player->UpdatePosition(dest, true);
+                }
 
                 GetTarget()->CastSpell(target, SPELL_ROGUE_KILLING_SPREE_WEAPON_DMG, TriggerCastFlags(TRIGGERED_FULL_MASK & ~TRIGGERED_DONT_REPORT_CAST_ERROR));
                 break;

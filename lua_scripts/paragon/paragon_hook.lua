@@ -74,6 +74,351 @@ local function GetPlayerIfExist(guid_low)
     return player
 end
 
+-- ============================================================================
+-- INDIVIDUAL PROGRESSION GATE
+-- ============================================================================
+
+-- mod-individual-progression stores a character's progression stage as hidden
+-- rewarded quests (66000 + ProgressionState). That stage is what decides the
+-- level the core stops granting XP at: 60 until PROGRESSION_PRE_TBC is passed,
+-- 70 until PROGRESSION_TBC_TIER_5 is passed, then the server max level.
+-- Paragon stays locked until the character actually sits at that cap.
+local IP_QUEST_BASE = 66000
+local IP_PROGRESSION_PRE_TBC = 8
+local IP_PROGRESSION_TBC_TIER_5 = 13
+local IP_PROGRESSION_MAX_STATE = 18
+local IP_VANILLA_MAX_LEVEL = 60
+local IP_TBC_MAX_LEVEL = 70
+local QUEST_STATUS_REWARDED = 6
+
+---
+--- Reads a numeric worldserver/module config option.
+---
+--- GetConfigValue returns a number, a boolean (for "true"/"false") or an empty
+--- string when the key is missing, so normalise all of those to a number.
+---
+--- @param key The config option name
+--- @param default Value returned when the option is missing or unreadable
+--- @return number The config value
+---
+local function GetServerConfigNumber(key, default)
+    if type(GetConfigValue) ~= "function" then
+        return default
+    end
+
+    local value = GetConfigValue(key)
+    if value == nil or value == "" then
+        return default
+    end
+
+    if type(value) == "boolean" then
+        return value and 1 or 0
+    end
+
+    return tonumber(value) or default
+end
+
+---
+--- Returns the highest individual progression stage the character has cleared.
+---
+--- Mirrors IndividualProgression::GetPlayerProgressionFromQuests: the stage is
+--- the highest hidden progression quest that has been rewarded.
+---
+--- @param player The player object
+--- @return number The progression stage (0 = nothing cleared)
+---
+local function GetProgressionState(player)
+    local state = 0
+
+    for i = 1, IP_PROGRESSION_MAX_STATE do
+        if player:GetQuestStatus(IP_QUEST_BASE + i) == QUEST_STATUS_REWARDED then
+            state = i
+        end
+    end
+
+    return state
+end
+
+---
+--- Returns the level cap individual progression currently enforces for a player.
+---
+--- Falls back to the server max level when the module is disabled, and honours
+--- IndividualProgression.ProgressionLimit the same way the module does (a stage
+--- above the limit counts as not passed).
+---
+--- @param player The player object
+--- @return number The current max level for that character
+---
+local function GetIndividualProgressionMaxLevel(player)
+    local server_max_level = GetServerConfigNumber("MaxPlayerLevel", 80)
+
+    if GetServerConfigNumber("IndividualProgression.Enable", 0) ~= 1 then
+        return server_max_level
+    end
+
+    local limit = GetServerConfigNumber("IndividualProgression.ProgressionLimit", 0)
+    local state = GetProgressionState(player)
+
+    local function has_passed(required_state)
+        if limit > 0 and required_state > limit then
+            return false
+        end
+
+        return state >= required_state
+    end
+
+    if not has_passed(IP_PROGRESSION_PRE_TBC) then
+        return IP_VANILLA_MAX_LEVEL
+    end
+
+    if not has_passed(IP_PROGRESSION_TBC_TIER_5) then
+        return IP_TBC_MAX_LEVEL
+    end
+
+    return server_max_level
+end
+
+---
+--- Checks whether paragon is unlocked for a player.
+---
+--- Paragon points only become spendable on the combat categories once the
+--- character has reached the level cap of its current progression stage. The
+--- utility category stays open while levelling, and already invested bonuses
+--- stay applied either way.
+---
+--- Set REQUIRE_PROGRESSION_MAX_LEVEL_FOR_PARAGON to 0 in `paragon_config` to
+--- disable this gate.
+---
+--- @param player The player object
+--- @return boolean True when every category is spendable
+--- @return number The level required to unlock the gated categories
+---
+local function IsParagonUnlocked(player)
+    local required_level = GetIndividualProgressionMaxLevel(player)
+
+    if tonumber(Config:GetByField("REQUIRE_PROGRESSION_MAX_LEVEL_FOR_PARAGON") or 1) ~= 1 then
+        return true, required_level
+    end
+
+    return player:GetLevel() >= required_level, required_level
+end
+
+---
+--- Returns the categories that can be spent in before the level cap is reached.
+---
+--- Defaults to the last category (the utility line - experience, reputation,
+--- gold, movement speed, loot), which is what helps a character level in the
+--- first place. Override with a comma separated list of category ids in the
+--- CATEGORIES_ALWAYS_UNLOCKED field of `paragon_config`.
+---
+--- @return table Set of category_id -> true
+---
+local function GetAlwaysUnlockedCategories()
+    local categories = Config:GetCategories() or {}
+    local configured = Config:GetByField("CATEGORIES_ALWAYS_UNLOCKED")
+    local unlocked = {}
+
+    if configured then
+        for id in tostring(configured):gmatch("%d+") do
+            unlocked[tonumber(id)] = true
+        end
+
+        return unlocked
+    end
+
+    -- No override: the highest category id is the utility line
+    local last_category = nil
+    for category_id in pairs(categories) do
+        if not last_category or category_id > last_category then
+            last_category = category_id
+        end
+    end
+
+    if last_category then
+        unlocked[last_category] = true
+    end
+
+    return unlocked
+end
+
+---
+--- Checks whether a single category can be spent in right now.
+---
+--- @param player The player object
+--- @param category_id The category ID to test
+--- @return boolean True when points may be assigned in that category
+--- @return number The level required to unlock it
+---
+local function IsCategoryUnlocked(player, category_id)
+    local unlocked, required_level = IsParagonUnlocked(player)
+    if unlocked then
+        return true, required_level
+    end
+
+    return GetAlwaysUnlockedCategories()[category_id] == true, required_level
+end
+
+-- ============================================================================
+-- MOVEMENT SPEED STATISTIC
+-- ============================================================================
+
+-- The AURA statistics are seeded against spell ids 1900000-1900002, which exist
+-- in neither the server's Spell.dbc nor the spell_dbc table, so AddAura is a no
+-- op for them. MOVE_SPEED is not even mapped to an id. Apply it as a speed rate
+-- instead, and re-assert it periodically: the core recomputes speed rates from
+-- scratch whenever a mount, snare or speed aura changes, which drops the bonus.
+local MOVE_RUN = 1
+local MOVE_SWIM = 3
+local MOVE_FLIGHT = 6
+local SPEED_MOVE_TYPES = { MOVE_RUN, MOVE_SWIM, MOVE_FLIGHT }
+local UPKEEP_INTERVAL = 3000
+local SPEED_EPSILON = 0.001
+
+-- guid_low -> { bonus, rates = { [move_type] = rate } }: what we last applied,
+-- so the bonus can be taken back out and the core's own rate recovered
+local speed_state = {}
+
+-- Payout per invested point and the ceiling on the total, in percent. Both are
+-- overridable per statistic with <NAME>_PERCENT_PER_POINT / <NAME>_MAX_PERCENT
+-- rows in `paragon_config`.
+local AURA_STAT_DEFAULTS = {
+    MOVE_SPEED    = { per_point = 0.5, max_percent = 25 },
+    MOUNT_SPEED   = { per_point = 0.5, max_percent = 25 },
+    GOLD          = { per_point = 0.5, max_percent = 25 },
+    REPUTATION    = { per_point = 0.5, max_percent = 25 },
+    CRAFTSMANSHIP = { per_point = 0.5, max_percent = 25 },
+    SCAVENGER     = { per_point = 0.5, max_percent = 25 }
+}
+
+-- value name -> statistic id, or false when the config has no such statistic
+local aura_stat_ids = {}
+
+---
+--- Finds the statistic id configured for an AURA statistic by its enum name.
+---
+--- Cached after the first lookup; the config is static for the Lua state.
+---
+--- @param value_name The type_value name, e.g. "MOVE_SPEED"
+--- @return number|nil The statistic id, or nil when none is configured
+---
+local function GetAuraStatId(value_name)
+    local cached = aura_stat_ids[value_name]
+    if cached ~= nil then
+        return cached or nil
+    end
+
+    for _, category_data in pairs(Config:GetCategories() or {}) do
+        for stat_id, stat_data in pairs(category_data.statistics or {}) do
+            if stat_data.type == "AURA" and stat_data.value == value_name then
+                aura_stat_ids[value_name] = stat_id
+                return stat_id
+            end
+        end
+    end
+
+    aura_stat_ids[value_name] = false
+    return nil
+end
+
+---
+--- Returns the bonus a paragon has invested in an AURA statistic, as a fraction.
+---
+--- @param paragon The paragon instance
+--- @param value_name The type_value name, e.g. "GOLD"
+--- @return number The bonus as a fraction (0.12 for +12%)
+---
+local function GetAuraStatBonus(paragon, value_name)
+    local stat_id = paragon and GetAuraStatId(value_name)
+    if not stat_id then
+        return 0
+    end
+
+    local points = paragon:GetStatValue(stat_id)
+    if not points or points <= 0 then
+        return 0
+    end
+
+    local defaults = AURA_STAT_DEFAULTS[value_name]
+    if not defaults then
+        return 0
+    end
+
+    local per_point = tonumber(Config:GetByField(value_name .. "_PERCENT_PER_POINT")) or defaults.per_point
+    local max_percent = tonumber(Config:GetByField(value_name .. "_MAX_PERCENT")) or defaults.max_percent
+
+    return math.min(points * per_point, max_percent) / 100
+end
+
+---
+--- Returns the speed bonus a paragon should have right now, as a fraction.
+---
+--- MOVE_SPEED applies always, MOUNT_SPEED only while mounted, and the two add up
+--- so a mounted player gets both.
+---
+--- @param player The player object
+--- @param paragon The paragon instance
+--- @return number The bonus as a fraction (0.12 for +12%)
+---
+local function GetMoveSpeedBonus(player, paragon)
+    local bonus = GetAuraStatBonus(paragon, "MOVE_SPEED")
+
+    if player:IsMounted() then
+        bonus = bonus + GetAuraStatBonus(paragon, "MOUNT_SPEED")
+    end
+
+    return bonus
+end
+
+---
+--- Sets the movement speed bonus on a player.
+---
+--- Multiplies whatever rate the core last computed rather than overwriting it,
+--- so mounts and snares keep working. Our own previous contribution is divided
+--- back out first when the rate still matches what we set.
+---
+--- Uses SetSpeed(.., forced) and not SetSpeedRate: the latter is a bare
+--- `m_speed_rate[mtype] = rate` in the core, so it neither propagates nor tells
+--- the client, and the player keeps moving at the old speed.
+---
+--- @param player The player object
+--- @param bonus The bonus fraction to apply (0 removes it)
+---
+local function SetMoveSpeedBonus(player, bonus)
+    local guid_low = player:GetGUIDLow()
+    local state = speed_state[guid_low]
+    local rates = {}
+
+    for _, move_type in ipairs(SPEED_MOVE_TYPES) do
+        local rate = player:GetSpeedRate(move_type)
+
+        -- Recover the core's rate. If it no longer matches what we set, the core
+        -- has recomputed since and the current value is already bonus free.
+        if state and math.abs(rate - (state.rates[move_type] or 0)) < SPEED_EPSILON then
+            rate = rate / (1 + state.bonus)
+        end
+
+        rates[move_type] = rate
+    end
+
+    speed_state[guid_low] = nil
+
+    if not bonus or bonus <= 0 then
+        for _, move_type in ipairs(SPEED_MOVE_TYPES) do
+            player:SetSpeed(move_type, rates[move_type], true)
+        end
+
+        return
+    end
+
+    local applied = {}
+    for _, move_type in ipairs(SPEED_MOVE_TYPES) do
+        applied[move_type] = rates[move_type] * (1 + bonus)
+        player:SetSpeed(move_type, applied[move_type], true)
+    end
+
+    speed_state[guid_low] = { bonus = bonus, rates = applied }
+end
+
 ---
 --- Applies or removes all paragon statistic modifiers to a player.
 ---
@@ -99,6 +444,10 @@ local function UpdatePlayerStatistics(player, paragon, apply)
         defaults = { player, paragon, apply },
     })
 
+    -- Movement speed is handled outside the loop below: it is a speed rate, not
+    -- an aura, and has to be taken back out before it can be reapplied
+    SetMoveSpeedBonus(player, apply and GetMoveSpeedBonus(player, paragon) or 0)
+
     local statistics = paragon:GetStatistics()
     if not statistics then
         return
@@ -119,18 +468,27 @@ local function UpdatePlayerStatistics(player, paragon, apply)
             goto continue
         end
 
+        -- Resolve the enum name (stat_data.value, e.g. "STAT_STRENGTH", "LOOT") to
+        -- its numeric constant. Seed data can reference names that are not defined
+        -- in paragon_constant.lua (e.g. AURA "MOVE_SPEED"/"GOLD"); skip those rather
+        -- than pass nil into the core methods.
+        local resolved_value = constant_stat_type[stat_data.value]
+        if resolved_value == nil then
+            goto continue
+        end
+
         -- Apply bonus based on statistic type
         if stat_data.type == "UNIT_MODS" then
-            player:HandleStatFlatModifier(constant_stat_type[stat_data.value], stat_data.application, stat_value, apply)
+            player:HandleStatFlatModifier(resolved_value, stat_data.application, stat_value, apply)
         elseif stat_data.type == "COMBAT_RATING" then
-            player:ApplyRatingMod(constant_stat_type[stat_data.value], stat_value, apply)
+            player:ApplyRatingMod(resolved_value, stat_value, apply)
         elseif stat_data.type == "AURA" then
             if apply then
                 for _ = 1, stat_value do
-                    player:AddAura(constant_stat_type[stat_data.value], player)
+                    player:AddAura(resolved_value, player)
                 end
             else
-                player:RemoveAura(constant_stat_type[stat_data.value])
+                player:RemoveAura(resolved_value)
             end
         end
 
@@ -321,6 +679,10 @@ end
 --- - OnBeforeClientLoadRequest: (player, paragon) - allows modification before loading
 --- - OnAfterClientLoadRequest: (player, paragon, categories) - allows modification of sent data
 ---
+--- Each category carries a `locked` field holding the level it unlocks at, or
+--- nil when it is spendable. The client greys those lines out and refuses input
+--- on them; the server enforces the same rule in OnParagonClientSendStatistics.
+---
 --- @param player The player object making the request
 --- @param _ Unused parameter (always nil for addon requests)
 ---
@@ -351,7 +713,13 @@ function OnParagonClientLoadRequest(player, _)
         return false
     end
 
-    for _, category_data in pairs(categories) do
+    for category_id, category_data in pairs(categories) do
+        -- Always assign, never leave a stale value behind: the category table is
+        -- shared between every player, so a nil here would keep the previous
+        -- player's flag
+        local category_unlocked, required_level = IsCategoryUnlocked(player, category_id)
+        category_data.locked = (not category_unlocked) and required_level or nil
+
         local statistics = category_data.statistics
         if statistics then
             for stat_id, stat_data in pairs(statistics) do
@@ -429,6 +797,15 @@ function OnParagonClientSendStatistics(player, arg_table)
         local categories = Config:GetCategories()
         local category_data = categories[category_id]
         if not category_data then
+            UpdatePlayerStatistics(player, paragon, true)
+            return false
+        end
+
+        -- Categories other than the utility line stay locked until the character
+        -- reaches the level cap of its individual progression stage
+        local category_unlocked, required_level = IsCategoryUnlocked(player, category_id)
+        if not category_unlocked then
+            player:SendNotification("This paragon line unlocks at level " .. required_level .. ".")
             UpdatePlayerStatistics(player, paragon, true)
             return false
         end
@@ -776,6 +1153,199 @@ function Hook.OnPlayerSkillUpdate(event, player, skill_id, value, max, step, new
 end
 
 -- ============================================================================
+-- AURA STATISTIC PAYOUTS
+-- ============================================================================
+
+---
+--- Pays out the GOLD statistic on looted money.
+---
+--- Deliberately hooks loot rather than PLAYER_EVENT_ON_MONEY_CHANGE: that fires
+--- for every money movement, including gold received in a trade or the mail, so
+--- boosting it would let two players pass the same gold back and forth and mint
+--- the bonus out of nothing.
+---
+--- @param event The event ID (37 = PLAYER_EVENT_ON_LOOT_MONEY)
+--- @param player The player looting
+--- @param amount The copper looted
+---
+function Hook.OnPlayerLootMoney(event, player, amount)
+    if not player or not amount or amount <= 0 then
+        return
+    end
+
+    local paragon = player:GetData("Paragon")
+    if not paragon then
+        return
+    end
+
+    local bonus = GetAuraStatBonus(paragon, "GOLD")
+    if bonus <= 0 then
+        return
+    end
+
+    -- The hook cannot rewrite the looted amount, so hand over the extra
+    local extra = math.floor(amount * bonus)
+    if extra > 0 then
+        player:ModifyMoney(extra)
+    end
+end
+
+---
+--- Boosts reputation gains by the REPUTATION statistic.
+---
+--- The core hands the hook the absolute new standing, not the gain: incremental
+--- amounts are already folded in and clamped by ReputationMgr before any script
+--- sees them. The gain is recovered by diffing against the current standing, so
+--- only that difference is boosted - multiplying `standing` itself would inflate
+--- the player's entire reputation with the faction on every tick.
+---
+--- @param event The event ID (15 = PLAYER_EVENT_ON_REPUTATION_CHANGE)
+--- @param player The player gaining reputation
+--- @param faction_id The faction being changed
+--- @param standing The new absolute standing
+--- @param incremental True when this is a gain rather than a set
+--- @return number|nil The boosted standing, or nil to leave it alone
+---
+function Hook.OnPlayerReputationChange(event, player, faction_id, standing, incremental)
+    if not player or not incremental or not standing then
+        return
+    end
+
+    local paragon = player:GetData("Paragon")
+    if not paragon then
+        return
+    end
+
+    local bonus = GetAuraStatBonus(paragon, "REPUTATION")
+    if bonus <= 0 then
+        return
+    end
+
+    local gained = standing - (player:GetReputation(faction_id) or 0)
+    if gained <= 0 then
+        return
+    end
+
+    local boosted = standing + math.floor(gained * bonus)
+
+    -- A standing of exactly -1 is the hook's "cancel this change" signal
+    if boosted == -1 then
+        return
+    end
+
+    return boosted
+end
+
+-- Skills CRAFTSMANSHIP applies to. Deliberately not every skill: the hook also
+-- fires for weapon and defense skill ups, which have nothing to do with a trade.
+local CRAFTSMANSHIP_SKILLS = {
+    [129] = true,  -- First Aid
+    [164] = true,  -- Blacksmithing
+    [165] = true,  -- Leatherworking
+    [171] = true,  -- Alchemy
+    [182] = true,  -- Herbalism
+    [185] = true,  -- Cooking
+    [186] = true,  -- Mining
+    [197] = true,  -- Tailoring
+    [202] = true,  -- Engineering
+    [333] = true,  -- Enchanting
+    [356] = true,  -- Fishing
+    [393] = true,  -- Skinning
+    [755] = true,  -- Jewelcrafting
+    [773] = true   -- Inscription
+}
+
+-- Item classes SCAVENGER refuses to duplicate
+local ITEM_CLASS_QUEST = 12
+local ITEM_CLASS_KEY = 13
+
+---
+--- Grants an extra skill point on trade skill ups for CRAFTSMANSHIP.
+---
+--- The hook hands over the character's *current* skill value, and the core adds
+--- `step` to whatever this returns - so returning value + 1 lands two points
+--- instead of one. The bump is skipped when it would reach the cap, because the
+--- core bails out entirely on `value >= max` and the player would lose the gain
+--- altogether.
+---
+--- @param event The event ID (61 = PLAYER_EVENT_ON_BEFORE_UPDATE_SKILL)
+--- @param player The player gaining the skill point
+--- @param skill_id The skill being raised
+--- @param value The character's current skill value
+--- @param max The character's maximum for that skill
+--- @param step The amount the core is about to add
+--- @return number|nil The adjusted current value, or nil to leave it alone
+---
+function Hook.OnPlayerBeforeUpdateSkill(event, player, skill_id, value, max, step)
+    if not player or not skill_id or not value or not max then
+        return
+    end
+
+    if not CRAFTSMANSHIP_SKILLS[skill_id] then
+        return
+    end
+
+    local paragon = player:GetData("Paragon")
+    if not paragon then
+        return
+    end
+
+    local chance = GetAuraStatBonus(paragon, "CRAFTSMANSHIP")
+    if chance <= 0 or math.random() >= chance then
+        return
+    end
+
+    local extra = 1
+    if value + extra + (step or 1) > max then
+        return
+    end
+
+    return value + extra
+end
+
+---
+--- Duplicates a looted item for SCAVENGER.
+---
+--- The hook cannot change what dropped, so the extra copy is handed over
+--- separately. Quest items and keys are excluded: duplicates of those are either
+--- rejected outright or actively confusing.
+---
+--- @param event The event ID (32 = PLAYER_EVENT_ON_LOOT_ITEM)
+--- @param player The player looting
+--- @param item The item looted
+--- @param count How many were looted
+---
+function Hook.OnPlayerLootItem(event, player, item, count)
+    if not player or not item then
+        return
+    end
+
+    local paragon = player:GetData("Paragon")
+    if not paragon then
+        return
+    end
+
+    local chance = GetAuraStatBonus(paragon, "SCAVENGER")
+    if chance <= 0 or math.random() >= chance then
+        return
+    end
+
+    local item_class = item:GetClass()
+    if item_class == ITEM_CLASS_QUEST or item_class == ITEM_CLASS_KEY then
+        return
+    end
+
+    -- Item has no GetEntry of its own in ALE; go through its template
+    local template = item.GetItemTemplate and item:GetItemTemplate()
+    local entry = template and template:GetItemId()
+    if not entry then
+        return
+    end
+
+    player:AddItem(entry, count or 1)
+end
+
+-- ============================================================================
 -- SERVER EVENTS
 -- ============================================================================
 
@@ -795,6 +1365,59 @@ function Hook.OnLuaStateOpen(event)
 
     for _, player in pairs(players) do
         Hook.OnPlayerLogin(3, player)
+    end
+end
+
+---
+--- Re-asserts the speed bonus on a player when it has drifted.
+---
+--- The core recomputes speed rates from its own auras whenever a player mounts,
+--- dismounts, is snared or gains a speed buff, which silently drops the paragon
+--- bonus. Nothing hooks that recompute, so poll for it instead - the work is a
+--- float compare per player. Mounting also changes the target bonus itself,
+--- because MOUNT_SPEED only counts while mounted.
+---
+--- @param player The player object
+--- @param paragon The paragon instance
+---
+local function UpkeepMoveSpeed(player, paragon)
+    local bonus = GetMoveSpeedBonus(player, paragon)
+    local state = speed_state[player:GetGUIDLow()]
+
+    if bonus <= 0 then
+        -- Nothing to grant: only act if a bonus of ours is still applied
+        if state then
+            SetMoveSpeedBonus(player, 0)
+        end
+
+        return
+    end
+
+    local drifted = not state
+        or math.abs(state.bonus - bonus) > SPEED_EPSILON
+        or math.abs(player:GetSpeedRate(MOVE_RUN) - (state.rates[MOVE_RUN] or 0)) > SPEED_EPSILON
+
+    if drifted then
+        SetMoveSpeedBonus(player, bonus)
+    end
+end
+
+---
+--- Periodic upkeep for the statistics the core cannot maintain on its own.
+---
+--- Runs every UPKEEP_INTERVAL for players who have paragon data loaded.
+---
+local function ParagonUpkeep()
+    local players = GetPlayersInWorld()
+    if not players then
+        return
+    end
+
+    for _, player in pairs(players) do
+        local paragon = player:GetData("Paragon")
+        if paragon then
+            UpkeepMoveSpeed(player, paragon)
+        end
     end
 end
 
@@ -862,6 +1485,10 @@ RegisterPlayerEvent(2, Hook.OnCharacterDelete)
 RegisterPlayerEvent(3, Hook.OnPlayerLogin)
 RegisterPlayerEvent(4, Hook.OnPlayerLogout)
 RegisterPlayerEvent(7, Hook.OnPlayerKillCreature)
+RegisterPlayerEvent(15, Hook.OnPlayerReputationChange)
+RegisterPlayerEvent(32, Hook.OnPlayerLootItem)
+RegisterPlayerEvent(37, Hook.OnPlayerLootMoney)
+RegisterPlayerEvent(61, Hook.OnPlayerBeforeUpdateSkill)
 RegisterPlayerEvent(42, Hook.OnPlayerCommand)
 RegisterPlayerEvent(45, Hook.OnPlayerAchievementComplete)
 RegisterPlayerEvent(54, Hook.OnPlayerQuestComplete)
@@ -870,6 +1497,9 @@ RegisterPlayerEvent(62, Hook.OnPlayerSkillUpdate)
 -- Server Events
 RegisterServerEvent(16, Hook.OnLuaStateClose)
 RegisterServerEvent(33, Hook.OnLuaStateOpen)
+
+-- Speed and recovery upkeep (0 repeats = forever)
+CreateLuaEvent(ParagonUpkeep, UPKEEP_INTERVAL, 0)
 
 -- Addon Communication Events
 RegisterClientRequests(Hook.Addon)

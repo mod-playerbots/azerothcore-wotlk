@@ -617,7 +617,15 @@ class spell_hun_masters_call : public SpellScript
 
     SpellCastResult DoCheckCast()
     {
-        Pet* pet = GetCaster()->ToPlayer()->GetPet();
+        // Non-player casters reach this: ClassLess puts abilities on creatures through
+        // smart_scripts action 11, and 272 of them were carrying Masters Call on 2026-09-15,
+        // where the unguarded ToPlayer() crashed the worldserver. Refusing the cast is the
+        // right answer for a creature -- it has no pet in the player sense to send anywhere.
+        Player* caster = GetCaster()->ToPlayer();
+        if (!caster)
+            return SPELL_FAILED_NO_PET;
+
+        Pet* pet = caster->GetPet();
         if (!pet || !pet->IsAlive())
             return SPELL_FAILED_NO_PET;
 
@@ -648,7 +656,11 @@ class spell_hun_masters_call : public SpellScript
 
     void HandleDummy(SpellEffIndex /*effIndex*/)
     {
-        GetCaster()->ToPlayer()->GetPet()->CastSpell(GetHitUnit(), GetEffectValue(), true);
+        // DoCheckCast refuses a non-player caster, but the effect handler is reachable on its
+        // own (a triggered cast skips the check), and GetPet() is null for a player without one.
+        if (Player* caster = GetCaster()->ToPlayer())
+            if (Pet* pet = caster->GetPet())
+                pet->CastSpell(GetHitUnit(), GetEffectValue(), true);
     }
 
     void HandleScriptEffect(SpellEffIndex /*effIndex*/)

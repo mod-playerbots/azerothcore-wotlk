@@ -1,35 +1,38 @@
--- --------------------------------------------------------
--- Host:                         127.0.0.1
--- Server Version:               5.7.31-log - MySQL Community Server (GPL)
--- Server Betriebssystem:        Win64
--- HeidiSQL Version:             11.0.0.5919
--- --------------------------------------------------------
+-- ClassLess: per-character storage.
+--
+-- Applied by AzerothCore's updater (data/sql/custom/db_characters is one of the directories
+-- it scans), so on a fresh realm this runs before any character logs in.
+--
+-- Five columns, and Server.lua reads exactly these five:
+--
+--   guid     the character
+--   pool     every ability RANK the character has found, comma-separated spell ids.
+--            MEDIUMTEXT because a completionist holds most of the ~3960 ranks -- about 27 KB
+--            of ids, well past what TEXT is comfortable with.
+--   profs    the weapon/armour proficiencies found. At most 21 skill ids.
+--   profver  migration marker for profs.
+--   poolver  which SHAPE pool is in: 0 = line ids (one entry meant a whole chain),
+--            1 = rank ids. The two cannot be told apart by looking at them -- a line id is
+--            its own rank 1 -- so the migration is driven by this, not by inspection.
+--            A fresh table is born at the current shape; see POOL_VER in Server.lua.
+--
+-- This file used to be a HeidiSQL export of the ability-picker panel's table: guid, spells,
+-- tpells, talents, stats, resets. The panel was removed on 2026-08-13 and those columns were
+-- dropped from the live realm, but this file kept recreating them -- so a realm set up from
+-- zero got the old shape, and Server.lua's EnsureSchema() then bolted the four real columns
+-- on with ALTER TABLE at first login. It worked, and it meant the fresh table never matched
+-- the one it was supposed to reproduce.
+--
+-- EnsureSchema() still runs and is still the safety net for an OLD realm, where it adds
+-- whatever is missing. Against this definition it finds nothing to do.
+--
+-- Re-runnable.
 
-/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET NAMES utf8 */;
-/*!50503 SET NAMES utf8mb4 */;
-/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
-/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
-
-
--- Exportiere Datenbank Struktur für characters
-USE `acore_characters`;
-
--- Exportiere Struktur von Tabelle characters.character_classless
 CREATE TABLE IF NOT EXISTS `character_classless` (
-  `guid` bigint(20) NOT NULL,
-  `spells` longtext,
-  `tpells` longtext,
-  `talents` longtext,
-  `stats` longtext,
-  `resets` int(11) NOT NULL DEFAULT '0',
+  `guid` BIGINT NOT NULL,
+  `pool` MEDIUMTEXT NOT NULL,
+  `profs` TEXT NOT NULL,
+  `profver` INT NOT NULL DEFAULT 0,
+  `poolver` INT NOT NULL DEFAULT 0,
   PRIMARY KEY (`guid`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
--- Exportiere Daten aus Tabelle characters.character_classless: ~1 rows (ungefähr)
-/*!40000 ALTER TABLE `character_classless` DISABLE KEYS */;
-/*!40000 ALTER TABLE `character_classless` ENABLE KEYS */;
-
-/*!40101 SET SQL_MODE=IFNULL(@OLD_SQL_MODE, '') */;
-/*!40014 SET FOREIGN_KEY_CHECKS=IF(@OLD_FOREIGN_KEY_CHECKS IS NULL, 1, @OLD_FOREIGN_KEY_CHECKS) */;
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

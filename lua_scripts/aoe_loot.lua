@@ -3,6 +3,16 @@ local controller = { }
 controller.OnLootFrameOpen = function(event, packet, player)
     local aoe_loot_active = player:GetData("AOE_LOOT_STATUS") or false
     if aoe_loot_active then
+      -- Solo only. In a party or raid the group's loot method is what decides who gets an
+      -- item, and merging a second corpse's loot into this one steps around it: the rolls are
+      -- started when a creature DIES, on that creature's own loot object, so anything moved
+      -- here afterwards carries no roll and goes straight to whoever opened the window -- past
+      -- need/greed, and past a master looter, who is the one participant supposed to be able
+      -- to say no. ClassLess tomes are ordinary loot rows, so this decided who got the books.
+      -- Solo there is nobody to take it from, so the convenience stays exactly as it was.
+      if player:IsInGroup() then
+          return nil
+      end
       local selection = player:GetSelection()
       if not (selection) then
           return nil
@@ -66,7 +76,7 @@ controller.SetCreatureLoot = function(player, creature, lootable_creatures)
                     if loot_data.needs_quest then
                         if not actual_loot:HasItem(loot_data.id) then
                             nbr_loot = nbr_loot + 1
-                            actual_loot:AddItem(loot_data.id, 100.0, loot_data.needs_quest, loot_mode, 0, loot_data.count, loot_data.count)
+                            actual_loot:AddItem(loot_data.id, loot_data.count, loot_data.count, 100.0, loot_mode, loot_data.needs_quest)
                             actual_loot:UpdateItemIndex()
                         end
                         -- Do NOT remove quest items from the original loot pool
@@ -77,7 +87,7 @@ controller.SetCreatureLoot = function(player, creature, lootable_creatures)
                                 nbr_loot = nbr_loot + 1
                             end
                             loot:RemoveItem(loot_data.id)
-                            actual_loot:AddItem(loot_data.id, 100.0, loot_data.needs_quest, loot_mode, 0, loot_data.count, loot_data.count)
+                            actual_loot:AddItem(loot_data.id, loot_data.count, loot_data.count, 100.0, loot_mode, loot_data.needs_quest)
                             actual_loot:UpdateItemIndex()
                         end
                     end
@@ -92,7 +102,7 @@ controller.SetCreatureLoot = function(player, creature, lootable_creatures)
             if #items == 0 then
                 loot:Clear()
                 loot:SetUnlootedCount(0)
-                corpse:AllLootRemoved()
+                corpse:AllLootRemovedFromCorpse()
                 corpse:RemoveFlag(0x0006 + 0x0049, 0x0001)
             else
                 loot:SetUnlootedCount(#items)

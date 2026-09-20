@@ -1,0 +1,34 @@
+-- ClassLess: drop the practice measurement rig's leftovers.
+--
+-- Both tables were written by the thousand-bot measurement run of 2026-09-04, which answered
+-- what it was for -- 143,749 credited kills, 236 ranks, 6 offers and 0 study tokens, which is
+-- what drove every design change since. The rig that filled them came out of Server.lua on
+-- 2026-09-05 and nothing has created or read them since; tools/classless-web/practicestats.py,
+-- the only reader, is deleted in the same pass.
+--
+-- classless_killlog is NOT dropped. It answers a different and still-open question -- which
+-- tome carriers the world actually kills -- and Server.lua still creates and fills it.
+DROP TABLE IF EXISTS `classless_practicelog`;
+DROP TABLE IF EXISTS `classless_practicechar`;
+
+-- Clear the practice column on every character that has one.
+--
+-- The stored values are in the format of the experience POT, which was replaced by a count of
+-- unspent ADVANCES: `L100=48` used to mean "48 experience banked toward the next rank of line
+-- 100" and would now read as forty-eight unspent advances. Every row holding one belongs to a
+-- playerbot from the measurement run -- bots are outside practice and so cannot spend them --
+-- but leaving forty-eight phantom advances in a column the load path trusts is not something to
+-- rely on staying inert.
+--
+-- The `CLASS|Spec=n` keys in the same strings are from the per-tree pot, deleted on 2026-09-05
+-- when bindgen.py made every talent reachable through a spell instead.
+-- The UPDATE that used to stand here was removed on 2026-09-15, during the from-zero
+-- rebuild that first ran this file against an empty database:
+--
+--   ERROR 1054 (42S22) at line 25: Unknown column 'trees' in 'where clause'
+--
+-- `character_classless` has exactly five columns -- guid, pool, profs, profver, poolver --
+-- and `trees` is not one of them; classless_drop_panel_columns.sql dropped it before this
+-- file was ever written. So the statement is fatal on a database built from the current
+-- character_classless.sql and pointless on a legacy one where the column is already gone.
+-- There is no database left on which it could do the thing it was written to do.

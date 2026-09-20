@@ -1,0 +1,47 @@
+--PROFICIENCIES
+-- What a character may WIELD and WEAR. Every character has all 21 from level
+-- one (2026-09-11) -- Server.lua's ApplyProficiencies opens each skill at 1
+-- with a ceiling of 75 and casts its spell on every login.
+--
+-- CLDB.profs[skillId] = { itemId, spellId, name }
+--
+-- The spellId is the only part that matters at runtime. Proficiency is NOT
+-- persisted -- Spell::EffectProficiency only runs on HIT -- so knowing the
+-- spell is not enough and the cast has to happen every session.
+--
+-- The itemId is the RETIRED manual, kept only so the row shape and every
+-- reader's index stay where they were. Those items and their 183 loot rows
+-- are deleted by data/sql/custom/classless_prof_retire.sql.
+--
+-- WHAT USED TO BE HERE, and must not come back: srcKind, srcEntry, srcName,
+-- place and level per manual, plus a CLDB.profalts block of 162 spread
+-- carriers. That was the placement of a collectible that no longer exists,
+-- and five picker tools went on reading it as "these 183 creatures are
+-- taken" -- reserving them against a tome for a book nobody can find.
+
+if CLDB==nil then CLDB={} end
+if CLDB.profs==nil then CLDB.profs={} end
+
+CLDB.profs={
+    [43]={62000,201,"Swords"},
+    [44]={62001,196,"Axes"},
+    [54]={62002,198,"Maces"},
+    [173]={62003,1180,"Daggers"},
+    [136]={62004,227,"Staves"},
+    [414]={62005,9077,"Leather Armor"},
+    [45]={62006,264,"Bows"},
+    [55]={62007,202,"Two-Handed Swords"},
+    [433]={62008,9116,"Shields"},
+    [413]={62009,8737,"Mail Armor"},
+    [172]={62010,197,"Two-Handed Axes"},
+    [633]={62011,1804,"Lockpicking"},
+    [160]={62012,199,"Two-Handed Maces"},
+    [46]={62013,266,"Guns"},
+    [293]={62014,750,"Plate Armor"},
+    [229]={62015,200,"Polearms"},
+    [118]={62016,674,"Dual Wield"},
+    [473]={62017,15590,"Fist Weapons"},
+    [176]={62018,2567,"Thrown"},
+    [228]={62019,5009,"Wands"},
+    [226]={62020,5011,"Crossbows"},
+}
