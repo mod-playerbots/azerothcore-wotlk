@@ -48,12 +48,7 @@ public:
         DATABASE_LOGIN      = 1,
         DATABASE_CHARACTER  = 2,
         DATABASE_WORLD      = 4,
-#ifdef MOD_PLAYERBOTS
-        DATABASE_PLAYERBOTS = 8,
-        DATABASE_MASK_ALL   = DATABASE_LOGIN | DATABASE_CHARACTER | DATABASE_WORLD | DATABASE_PLAYERBOTS
-#else
         DATABASE_MASK_ALL   = DATABASE_LOGIN | DATABASE_CHARACTER | DATABASE_WORLD
-#endif
     };
 
     [[nodiscard]] uint32 GetUpdateFlags() const

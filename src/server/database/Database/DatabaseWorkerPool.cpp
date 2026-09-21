@@ -41,10 +41,6 @@
 #include <sstream>
 #endif
 
-#ifdef MOD_PLAYERBOTS
-#include "Implementation/PlayerbotsDatabase.h"
-#endif
-
 class PingOperation : public SQLOperation
 {
     //! Operation for idle delaythreads
@@ -94,6 +90,11 @@ uint32 DatabaseWorkerPool<T>::Open()
 
     LOG_INFO("sql.driver", "Opening DatabasePool '{}'. Asynchronous connections: {}, synchronous connections: {}.",
         GetDatabaseName(), _async_threads, _synch_threads);
+
+    _queue->Cancel();
+    _connections[IDX_ASYNC].clear();
+    _connections[IDX_SYNCH].clear();
+    _queue->Reset();
 
     uint32 error = OpenConnections(IDX_ASYNC, _async_threads);
 
@@ -575,7 +576,3 @@ void DatabaseWorkerPool<T>::ExecuteOrAppend(SQLTransaction<T>& trans, PreparedSt
 template class AC_DATABASE_API DatabaseWorkerPool<LoginDatabaseConnection>;
 template class AC_DATABASE_API DatabaseWorkerPool<WorldDatabaseConnection>;
 template class AC_DATABASE_API DatabaseWorkerPool<CharacterDatabaseConnection>;
-
-#ifdef MOD_PLAYERBOTS
-template class AC_DATABASE_API DatabaseWorkerPool<PlayerbotsDatabaseConnection>;
-#endif

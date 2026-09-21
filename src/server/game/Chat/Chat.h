@@ -47,13 +47,6 @@ public:
     // Builds chat packet and returns receiver guid position in the packet to substitute in whisper builders
     static std::size_t BuildChatPacket(WorldPacket& data, ChatMsg chatType, Language language, WorldObject const* sender, WorldObject const* receiver, std::string_view message, uint32 achievementId = 0, std::string const& channelName = "", LocaleConstant locale = DEFAULT_LOCALE);
 
-    // All in one chat message builder
-    static void BuildChatPacket(
-            WorldPacket& data, ChatMsg msgtype, std::string_view message, Language language = LANG_UNIVERSAL, PlayerChatTag chatTag = CHAT_TAG_NONE,
-            ObjectGuid const& senderGuid = ObjectGuid(), std::string_view senderName = {},
-            ObjectGuid const& targetGuid = ObjectGuid(), std::string_view targetName = {},
-            std::string_view channelName = {}, uint32 achievementId = 0);
-
     static char* LineFromMessage(char*& pos) { char* start = strtok(pos, "\n"); pos = nullptr; return start; }
 
     void SendNotification(std::string_view str);
@@ -198,7 +191,7 @@ public:
     bool _ParseCommands(std::string_view text);
     virtual bool ParseCommands(std::string_view text);
 
-    void SendGlobalSysMessage(const char* str);
+    void SendGlobalSysMessage(char const* str);
 
     // function with different implementation for chat/console
     virtual bool IsHumanReadable() const { return true; }
@@ -210,7 +203,7 @@ public:
     bool HasLowerSecurity(Player* target, ObjectGuid guid = ObjectGuid::Empty, bool strong = false);
     bool HasLowerSecurityAccount(WorldSession* target, uint32 account, bool strong = false);
 
-    void SendGlobalGMSysMessage(const char* str);
+    void SendGlobalGMSysMessage(char const* str);
     Player* getSelectedPlayer() const;
     Creature* getSelectedCreature() const;
     Unit* getSelectedUnit() const;
@@ -230,7 +223,7 @@ public:
 
     uint32    extractSpellIdFromLink(char* text);
     ObjectGuid::LowType extractLowGuidFromLink(char* text, HighGuid& guidHigh);
-    bool GetPlayerGroupAndGUIDByName(const char* cname, Player*& player, Group*& group, ObjectGuid& guid, bool offline = false);
+    bool GetPlayerGroupAndGUIDByName(char const* cname, Player*& player, Group*& group, ObjectGuid& guid, bool offline = false);
     std::string extractPlayerNameFromLink(char* text);
     // select by arg (name/link) or in-game selection online/offline player
     bool extractPlayerTarget(char* args, Player** player, ObjectGuid* player_guid = nullptr, std::string* player_name = nullptr);

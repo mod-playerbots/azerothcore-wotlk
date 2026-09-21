@@ -29,7 +29,10 @@ DBCDatabaseLoader::DBCDatabaseLoader(char const* tableName, char const* dbcForma
       _stringPool(stringPool)
 {
     // Get sql index position
-    _recordSize = DBCFileLoader::GetFormatRecordSize(_dbcFormat, &_sqlIndexPos);
+    int32 indexPos = -1;
+    _recordSize = DBCFileLoader::GetFormatRecordSize(_dbcFormat, &indexPos);
+    if (indexPos >= 0)
+        _sqlIndexPos = indexPos;
 
     ASSERT(_recordSize);
 }
@@ -99,15 +102,12 @@ char* DBCDatabaseLoader::Load(uint32& records, char**& indexTable)
                     dataOffset += sizeof(uint8);
                     break;
                 case FT_STRING:
-                    // not override string if new string is empty
+                    // an empty column means "not overridden", not "blank it"
                     if (fields[sqlColumnNumber].Get<std::string>().empty() && oldDataValue)
-                    {
                         *reinterpret_cast<char**>(&dataValue[dataOffset]) = *reinterpret_cast<char**>(&oldDataValue[dataOffset]);
-                    }
                     else
-                    {
                         *reinterpret_cast<char**>(&dataValue[dataOffset]) = CloneStringToPool(fields[sqlColumnNumber].Get<std::string>());
-                    }
+
                     dataOffset += sizeof(char*);
                     break;
                 case FT_SORT:

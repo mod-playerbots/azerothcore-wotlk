@@ -226,12 +226,12 @@ public: /* ItemScript */
     bool OnItemRemove(Player* player, Item* item);
     bool OnCastItemCombatSpell(Player* player, Unit* victim, SpellInfo const* spellInfo, Item* item);
     void OnGossipSelect(Player* player, Item* item, uint32 sender, uint32 action);
-    void OnGossipSelectCode(Player* player, Item* item, uint32 sender, uint32 action, const char* code);
+    void OnGossipSelectCode(Player* player, Item* item, uint32 sender, uint32 action, char const* code);
 
 public: /* CreatureScript */
     bool OnGossipHello(Player* player, Creature* creature);
     bool OnGossipSelect(Player* player, Creature* creature, uint32 sender, uint32 action);
-    bool OnGossipSelectCode(Player* player, Creature* creature, uint32 sender, uint32 action, const char* code);
+    bool OnGossipSelectCode(Player* player, Creature* creature, uint32 sender, uint32 action, char const* code);
     bool OnQuestAccept(Player* player, Creature* creature, Quest const* quest);
     bool OnQuestSelect(Player* player, Creature* creature, Quest const* quest);
     bool OnQuestComplete(Player* player, Creature* creature, Quest const* quest);
@@ -246,7 +246,7 @@ public: /* CreatureScript */
 public: /* GameObjectScript */
     bool OnGossipHello(Player* player, GameObject* go);
     bool OnGossipSelect(Player* player, GameObject* go, uint32 sender, uint32 action);
-    bool OnGossipSelectCode(Player* player, GameObject* go, uint32 sender, uint32 action, const char* code);
+    bool OnGossipSelectCode(Player* player, GameObject* go, uint32 sender, uint32 action, char const* code);
     bool OnQuestAccept(Player* player, GameObject* go, Quest const* quest);
     bool OnQuestReward(Player* player, GameObject* go, Quest const* quest, uint32 opt);
     uint32 GetDialogStatus(Player* player, GameObject* go);
@@ -333,6 +333,7 @@ public: /* PlayerScript */
     void OnPlayerAfterSpecSlotChanged(Player* player, uint8 newSlot);
     void OnPlayerMoneyChanged(Player* player, int32& amount);
     void OnPlayerBeforeLootMoney(Player* player, Loot* loot);
+    void OnPlayerBeforeSendLoot(Player* player, ObjectGuid lootGuid, Loot* loot);
     void OnPlayerGiveXP(Player* player, uint32& amount, Unit* victim, uint8 xpSource);
     bool OnPlayerReputationChange(Player* player, uint32 factionID, int32& standing, bool incremental);
     void OnPlayerReputationRankChange(Player* player, uint32 factionID, ReputationRank newRank, ReputationRank oldRank, bool increased);
@@ -369,10 +370,11 @@ public: /* PlayerScript */
     void OnPlayerAchievementSave(CharacterDatabaseTransaction trans, Player* player, uint16 achiId, CompletedAchievementData achiData);
     void OnPlayerCriteriaSave(CharacterDatabaseTransaction trans, Player* player, uint16 critId, CriteriaProgress criteriaData);
     void OnPlayerGossipSelect(Player* player, uint32 menu_id, uint32 sender, uint32 action);
-    void OnPlayerGossipSelectCode(Player* player, uint32 menu_id, uint32 sender, uint32 action, const char* code);
+    void OnPlayerGossipSelectCode(Player* player, uint32 menu_id, uint32 sender, uint32 action, char const* code);
     void OnPlayerBeingCharmed(Player* player, Unit* charmer, uint32 oldFactionId, uint32 newFactionId);
     void OnPlayerAfterSetVisibleItemSlot(Player* player, uint8 slot, Item* item);
     void OnPlayerAfterMoveItemFromInventory(Player* player, Item* it, uint8 bag, uint8 slot, bool update);
+    void OnPlayerAfterMoveItemToInventory(Player* player, Item* it, bool update);
     void OnPlayerEquip(Player* player, Item* it, uint8 bag, uint8 slot, bool update);
     void OnPlayerUnequip(Player* player, Item* it);
     void OnPlayerJoinBG(Player* player);
@@ -458,7 +460,7 @@ public: /* PlayerScript */
     void OnPlayerIsPvP(Player* player, bool& result);
     void OnPlayerGetMaxSkillValueForLevel(Player* player, uint16& result);
     bool OnPlayerNotSetArenaTeamInfoField(Player* player, uint8 slot, ArenaTeamInfoType type, uint32 value);
-    bool OnPlayerCanJoinLfg(Player* player, uint8 roles, lfg::LfgDungeonSet& dungeons, const std::string& comment);
+    bool OnPlayerCanJoinLfg(Player* player, uint8 roles, lfg::LfgDungeonSet& dungeons, std::string const& comment);
     bool OnPlayerCanEnterMap(Player* player, MapEntry const* entry, InstanceTemplate const* instance, MapDifficulty const* mapDiff, bool loginCheck);
     bool OnPlayerCanInitTrade(Player* player, Player* target);
     bool OnPlayerCanSetTradeItem(Player* player, Item* tradedItem, uint8 tradeSlot);
@@ -491,6 +493,11 @@ public: /* PlayerScript */
     void OnPlayerGetReputationPriceDiscount(Player const* player, FactionTemplateEntry const* factionTemplate, float& discount);
     void OnPlayerLearnTaxiNode(Player const* player, uint32 nodeId);
     void OnPlayerBeforeGetLevelForXPGain(Player const* player, uint8& level);
+    void OnPlayerAfterTakeItemFromMail(Player* player, Item* item, uint32 count);
+    bool OnPlayerCanLearnSpell(Player* player, uint32 spellId);
+    void OnPlayerBeforeReceiveSpellListFromTrainer(Player* player, Creature* trainer, WorldPackets::NPC::TrainerList& trainerList);
+    void OnPlayerGetTrainerSpellState(Player const* player, uint32 trainerId, uint32 spellId, Trainer::SpellState& state);
+    void OnPlayerAfterTrainSpell(Player* player, Creature* trainer, uint32 spellId);
 
     // Anti cheat
     void AnticheatSetCanFlybyServer(Player* player, bool apply);
@@ -515,9 +522,9 @@ public: /* AccountScript */
 public: /* GuildScript */
     void OnGuildAddMember(Guild* guild, Player* player, uint8& plRank);
     void OnGuildRemoveMember(Guild* guild, Player* player, bool isDisbanding, bool isKicked);
-    void OnGuildMOTDChanged(Guild* guild, const std::string& newMotd);
-    void OnGuildInfoChanged(Guild* guild, const std::string& newInfo);
-    void OnGuildCreate(Guild* guild, Player* leader, const std::string& name);
+    void OnGuildMOTDChanged(Guild* guild, std::string const& newMotd);
+    void OnGuildInfoChanged(Guild* guild, std::string const& newInfo);
+    void OnGuildCreate(Guild* guild, Player* leader, std::string const& name);
     void OnGuildDisband(Guild* guild);
     void OnGuildMemberWitdrawMoney(Guild* guild, Player* player, uint32& amount, bool isRepair);
     void OnGuildMemberDepositMoney(Guild* guild, Player* player, uint32& amount);
@@ -530,7 +537,7 @@ public: /* GuildScript */
 public: /* GroupScript */
     void OnGroupAddMember(Group* group, ObjectGuid guid);
     void OnGroupInviteMember(Group* group, ObjectGuid guid);
-    void OnGroupRemoveMember(Group* group, ObjectGuid guid, RemoveMethod method, ObjectGuid kicker, const char* reason);
+    void OnGroupRemoveMember(Group* group, ObjectGuid guid, RemoveMethod method, ObjectGuid kicker, char const* reason);
     void OnGroupChangeLeader(Group* group, ObjectGuid newLeaderGuid, ObjectGuid oldLeaderGuid);
     void OnGroupDisband(Group* group);
     bool CanGroupJoinBattlegroundQueue(Group const* group, Player* member, Battleground const* bgTemplate, uint32 MinPlayerCount, bool isRated, uint32 arenaSlot);
@@ -540,6 +547,7 @@ public: /* GlobalScript */
     void OnGlobalItemDelFromDB(CharacterDatabaseTransaction trans, ObjectGuid::LowType itemGuid);
     void OnGlobalMirrorImageDisplayItem(Item const* item, uint32& display);
     void OnBeforeUpdateArenaPoints(ArenaTeam* at, std::map<ObjectGuid, uint32>& ap);
+    void OnArenaWeekReset();
     void OnAfterRefCount(Player const* player, Loot& loot, bool canRate, uint16 lootMode, LootStoreItem* LootStoreItem, uint32& maxcount, LootStore const& store);
     void OnAfterCalculateLootGroupAmount(Player const* player, Loot& loot, uint16 lootMode, uint32& groupAmount, LootStore const& store);
     void OnBeforeDropAddItem(Player const* player, Loot& loot, bool canRate, uint16 lootMode, LootStoreItem* LootStoreItem, LootStore const& store);
@@ -584,6 +592,7 @@ public: /* UnitScript */
     void OnDisplayIdChange(Unit* unit, uint32 displayId);
     void OnUnitEnterEvadeMode(Unit* unit, uint8 why);
     void OnUnitEnterCombat(Unit* unit, Unit* victim);
+    void OnUnitExitCombat(Unit* unit);
     void OnUnitDeath(Unit* unit, Unit* killer);
     void OnUnitSetShapeshiftForm(Unit* unit, uint8 form);
 
@@ -593,8 +602,8 @@ public: /* MovementHandlerScript */
 public: /* AllCreatureScript */
     //listener function (OnAllCreatureUpdate) is called by OnCreatureUpdate
     //void OnAllCreatureUpdate(Creature* creature, uint32 diff);
-    void OnBeforeCreatureSelectLevel(const CreatureTemplate* cinfo, Creature* creature, uint8& level);
-    void OnCreatureSelectLevel(const CreatureTemplate* cinfo, Creature* creature);
+    void OnBeforeCreatureSelectLevel(CreatureTemplate const* cinfo, Creature* creature, uint8& level);
+    void OnCreatureSelectLevel(CreatureTemplate const* cinfo, Creature* creature);
     void OnCreatureSaveToDB(Creature* creature);
 
 public: /* AllGameobjectScript */
@@ -632,6 +641,7 @@ public: /* BGScript */
     void OnBattlegroundEnd(Battleground* bg, TeamId winnerTeamId);
     void OnBattlegroundDestroy(Battleground* bg);
     void OnBattlegroundCreate(Battleground* bg);
+    void OnBattlegroundSetup(Battleground* bg);
     bool CanAddGroupToMatchingPool(BattlegroundQueue* queue, GroupQueueInfo* group, uint32 poolPlayerCount, Battleground* bg, BattlegroundBracketId bracketId);
     bool GetPlayerMatchmakingRating(ObjectGuid playerGuid, BattlegroundTypeId bgTypeId, float& outRating);
 
@@ -651,6 +661,7 @@ public: /* SpellSC */
     void OnScaleAuraUnitAdd(Spell* spell, Unit* target, uint32 effectMask, bool checkIfValid, bool implicit, uint8 auraScaleMask, TargetInfo& targetInfo);
     void OnRemoveAuraScaleTargets(Spell* spell, TargetInfo& targetInfo, uint8 auraScaleMask, bool& needErase);
     void OnBeforeAuraRankForLevel(SpellInfo const* spellInfo, SpellInfo const* latestSpellInfo, uint8 level);
+    void OnIsAuraExclusiveBySpecificWith(SpellInfo const* spellInfo, SpellInfo const* otherSpellInfo, bool& isExclusive);
     void OnDummyEffect(WorldObject* caster, uint32 spellID, SpellEffIndex effIndex, GameObject* gameObjTarget);
     void OnDummyEffect(WorldObject* caster, uint32 spellID, SpellEffIndex effIndex, Creature* creatureTarget);
     void OnDummyEffect(WorldObject* caster, uint32 spellID, SpellEffIndex effIndex, Item* itemTarget);
@@ -691,6 +702,7 @@ public: /* ArenaScript */
     void OnArenaStart(Battleground* const bg);
     bool OnBeforeArenaTeamMemberUpdate(ArenaTeam* team, Player* player, bool won, uint32 opponentMatchmakerRating, int32 matchmakerChange);
     bool CanSaveArenaStatsForMember(ArenaTeam* team, ObjectGuid playerGuid);
+    void OnAddMember(ArenaTeam* team, ArenaTeamMember& member);
 
 public: /* MiscScript */
 
@@ -707,7 +719,7 @@ public: /* MiscScript */
     bool CanItemApplyEquipSpell(Player* player, Item* item);
     bool CanSendAuctionHello(WorldSession const* session, ObjectGuid guid, Creature* creature);
     void ValidateSpellAtCastSpell(Player* player, uint32& oldSpellId, uint32& spellId, uint8& castCount, uint8& castFlags);
-    void OnPlayerSetPhase(const AuraEffect* auraEff, AuraApplication const* aurApp, uint8 mode, bool apply, uint32& newPhase);
+    void OnPlayerSetPhase(AuraEffect const* auraEff, AuraApplication const* aurApp, uint8 mode, bool apply, uint32& newPhase);
     void ValidateSpellAtCastSpellResult(Player* player, Unit* mover, Spell* spell, uint32 oldSpellId, uint32 spellId);
     void OnAfterLootTemplateProcess(Loot* loot, LootTemplate const* tab, LootStore const& store, Player* lootOwner, bool personal, bool noEmptyError, uint16 lootMode);
     void OnInstanceSave(InstanceSave* instanceSave);
@@ -721,14 +733,14 @@ public: /* CommandSC */
 
 public: /* DatabaseScript */
 
-    bool OnDatabasesLoading();
+    bool OnModuleDatabasesLoading();
     void OnAfterDatabasesLoaded(uint32 updateFlags);
     void OnAfterDatabaseLoadCreatureTemplates(std::vector<CreatureTemplate*> creatureTemplateStore);
-    void OnDatabasesKeepAlive();
-    void OnDatabasesClosing();
+    void OnModuleDatabasesKeepAlive();
+    void OnModuleDatabasesClosing();
     void OnDatabaseWarnAboutSyncQueries(bool apply);
     void OnDatabaseSelectIndexLogout(Player* player, uint32& statementIndex, uint32& statementParam);
-    void OnDatabaseGetDBRevision(std::string& revision);
+    void OnDatabaseGetDBRevision(std::map<std::string, std::string>& revisions);
 
 public: /* WorldObjectScript */
 

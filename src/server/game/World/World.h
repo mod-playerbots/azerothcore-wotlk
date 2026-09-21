@@ -80,7 +80,7 @@ enum BillingPlanFlags
     SESSION_USAGE           = 0x10, // Unk, NYI
     SESSION_TIME_MIXTURE    = 0x20, // Unk, NYI
     SESSION_RESTRICTED      = 0x40, // Unk, NYI
-    SESSION_ENABLE_CAIS     = 0x80, // Unk, NYI, possibly account play time limit related for China?
+    SESSION_ENABLE_CAIS     = 0x80, // Account play time limit related for China
 };
 
 enum RealmZone
@@ -229,9 +229,6 @@ public:
     // used World DB version
     void LoadDBVersion() override;
     [[nodiscard]] char const* GetDBVersion() const override { return _dbVersion.c_str(); }
-#ifdef MOD_PLAYERBOTS
-    [[nodiscard]] char const* GetPlayerbotsDBRevision() const override { return m_PlayerbotsDBRevision.c_str(); }
-#endif
 
     void UpdateAreaDependentAuras() override;
 
@@ -245,6 +242,7 @@ public:
 
 protected:
     void _UpdateGameTime();
+    bool RescheduleShutdownForWintergrasp();
     // callback for UpdateRealmCharacters
     void _UpdateRealmCharCount(PreparedQueryResult resultCharCount,uint32 accountId);
 
@@ -307,9 +305,6 @@ private:
     // used versions
     std::string _dbVersion;
     uint32 _dbClientCacheVersion;
-#ifdef MOD_PLAYERBOTS
-    std::string m_PlayerbotsDBRevision;
-#endif
 
     void ProcessQueryCallbacks();
     QueryCallbackProcessor _queryProcessor;

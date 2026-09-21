@@ -91,9 +91,11 @@ namespace Acore
     {
         Unit& i_unit;
         bool isCreature;
-        explicit AIRelocationNotifier(Unit& unit) : i_unit(unit), isCreature(unit.IsCreature())  {}
+        bool includePlayers;
+        explicit AIRelocationNotifier(Unit& unit, bool includePlayers = false) : i_unit(unit), isCreature(unit.IsCreature()), includePlayers(includePlayers)  {}
         template<class T> void Visit(GridRefMgr<T>&) {}
         void Visit(CreatureMapType&);
+        void Visit(PlayerMapType&);
     };
 
     enum class TeamFilter
@@ -677,7 +679,7 @@ namespace Acore
     class GameObjectFocusCheck
     {
     public:
-        GameObjectFocusCheck(Unit const* unit, uint32 focusId) : i_unit(unit), i_focusId(focusId) {}
+        GameObjectFocusCheck(WorldObject const* caster, uint32 focusId) : i_caster(caster), i_focusId(focusId) {}
         bool operator()(GameObject* go) const
         {
             if (go->GetGOInfo()->type != GAMEOBJECT_TYPE_SPELL_FOCUS)
@@ -689,12 +691,12 @@ namespace Acore
             if (go->GetGOInfo()->spellFocus.focusId != i_focusId)
                 return false;
 
-            float dist = (float)((go->GetGOInfo()->spellFocus.dist) / 2);
+            float const dist = go->GetGOInfo()->spellFocus.dist;
 
-            return go->IsWithinDistInMap(i_unit, dist);
+            return go->IsWithinDistInMap(i_caster, dist);
         }
     private:
-        Unit const* i_unit;
+        WorldObject const* i_caster;
         uint32 i_focusId;
     };
 

@@ -384,6 +384,7 @@ public:
     //
     // methods useable during all spell handling phases
     Unit* GetCaster();
+    GameObject* GetGObjCaster();
     Unit* GetOriginalCaster();
     SpellInfo const* GetSpellInfo();
     SpellValue const* GetSpellValue();
@@ -823,12 +824,14 @@ public:
 #define AuraEffectSplitFn(F, I) EffectSplitFunction(&F, I)
 
     // executed when aura checks if it can proc
+    // do not use this hook for triggering spellcasts/removing auras etc - runs mid proc-iteration and may be unsafe
     // example: DoCheckProc += AuraCheckProcFn(class::function);
     // where function is: bool function (ProcEventInfo& eventInfo);
     HookList<CheckProcHandler> DoCheckProc;
 #define AuraCheckProcFn(F) CheckProcHandlerFunction(&F)
 
     // executed when aura effect checks if it can proc the aura
+    // do not use this hook for triggering spellcasts/removing auras etc - runs mid proc-iteration and may be unsafe
     // example: DoCheckEffectProc += AuraCheckEffectProcFn(class::function, EffectIndexSpecifier, EffectAuraNameSpecifier);
     // where function is: bool function (AuraEffect const* aurEff, ProcEventInfo& eventInfo);
     HookList<CheckEffectProcHandler> DoCheckEffectProc;

@@ -23,6 +23,7 @@
 #include "BattlefieldWG.h"
 #include "ScriptMgr.h"
 #include "Chat.h"
+#include "GameGraveyard.h"
 #include "GameTime.h"
 #include "MapMgr.h"
 #include "Opcodes.h"
@@ -578,6 +579,47 @@ uint32 BattlefieldWG::GetAreaByGraveyardId(uint8 gId) const
     }
 
     return 0;
+}
+
+void BattlefieldWG::RelocateDeadPlayers(uint8 graveyardId, TeamId losingTeam)
+{
+    // Nobody could use the graveyard before the change, so nobody is left waiting on it.
+    if (losingTeam == TEAM_NEUTRAL)
+        return;
+
+    BfGraveyard const* graveyard = GetGraveyardById(graveyardId);
+    if (!graveyard)
+        return;
+
+    GraveyardStruct const* capturedLoc = sGraveyard->GetGraveyard(graveyard->GetGraveyardId());
+    if (!capturedLoc)
+        return;
+
+    ForEachPlayerInZone([this, capturedLoc, losingTeam](Player* player)
+    {
+        // Only the team that just lost it. The other team could never have released here, since
+        // RepopAtGraveyard picks a graveyard their own team holds, so they are passers-by.
+        if (player->GetTeamId() != losingTeam)
+            return;
+
+        // Ghosts only. Skips the living, and corpses that RepopAtGraveyard will send to a
+        // graveyard their team holds once they release.
+        if (!player->HasPlayerFlag(PLAYER_FLAGS_GHOST))
+            return;
+
+        // Only ghosts waiting at this graveyard, not elsewhere in the zone.
+        if (player->GetDistance2d(capturedLoc->x, capturedLoc->y) > 50.0f)
+            return;
+
+        GraveyardStruct const* safeLoc = GetClosestGraveyard(player);
+        if (!safeLoc)
+            return;
+
+        player->TeleportTo(safeLoc->Map, safeLoc->x, safeLoc->y, safeLoc->z, player->GetOrientation());
+
+        // The spirit guides here are phased out for them now, so they can't queue themselves.
+        AddPlayerToResurrectQueue(ObjectGuid::Empty, player->GetGUID());
+    });
 }
 
 void BattlefieldWG::OnCreatureCreate(Creature* creature)

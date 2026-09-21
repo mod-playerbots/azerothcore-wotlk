@@ -32,9 +32,6 @@ class TestSpellEntryHelper
 public:
     TestSpellEntryHelper()
     {
-        // Zero initialize all fields
-        std::memset(&_entry, 0, sizeof(_entry));
-
         // Set safe defaults
         _entry.EquippedItemClass = -1;
         _entry.SchoolMask = SPELL_SCHOOL_MASK_NORMAL;
@@ -102,12 +99,28 @@ public:
         return *this;
     }
 
+    TestSpellEntryHelper& WithAttributesEx(uint32 attr)
+    {
+        _entry.AttributesEx = attr;
+        return *this;
+    }
+
     TestSpellEntryHelper& WithEffect(uint8 effIndex, uint32 effect, uint32 auraType = 0)
     {
         if (effIndex < MAX_SPELL_EFFECTS)
         {
             _entry.Effect[effIndex] = effect;
             _entry.EffectApplyAuraName[effIndex] = auraType;
+        }
+        return *this;
+    }
+
+    TestSpellEntryHelper& WithEffectImplicitTargets(uint8 effIndex, uint32 targetA, uint32 targetB = 0)
+    {
+        if (effIndex < MAX_SPELL_EFFECTS)
+        {
+            _entry.EffectImplicitTargetA[effIndex] = targetA;
+            _entry.EffectImplicitTargetB[effIndex] = targetB;
         }
         return *this;
     }
@@ -125,6 +138,13 @@ public:
     {
         if (effIndex < MAX_SPELL_EFFECTS)
             _entry.EffectBasePoints[effIndex] = basePoints;
+        return *this;
+    }
+
+    TestSpellEntryHelper& WithEffectMiscValue(uint8 effIndex, int32 miscValue)
+    {
+        if (effIndex < MAX_SPELL_EFFECTS)
+            _entry.EffectMiscValue[effIndex] = miscValue;
         return *this;
     }
 
@@ -147,7 +167,7 @@ public:
     }
 
 private:
-    SpellEntry _entry;
+    SpellEntry _entry{};
 };
 
 /**
@@ -215,9 +235,21 @@ public:
         return *this;
     }
 
+    SpellInfoBuilder& WithAttributesEx(uint32 attr)
+    {
+        _entryHelper.WithAttributesEx(attr);
+        return *this;
+    }
+
     SpellInfoBuilder& WithEffect(uint8 effIndex, uint32 effect, uint32 auraType = 0)
     {
         _entryHelper.WithEffect(effIndex, effect, auraType);
+        return *this;
+    }
+
+    SpellInfoBuilder& WithEffectImplicitTargets(uint8 effIndex, uint32 targetA, uint32 targetB = 0)
+    {
+        _entryHelper.WithEffectImplicitTargets(effIndex, targetA, targetB);
         return *this;
     }
 
@@ -230,6 +262,12 @@ public:
     SpellInfoBuilder& WithEffectBasePoints(uint8 effIndex, int32 basePoints)
     {
         _entryHelper.WithEffectBasePoints(effIndex, basePoints);
+        return *this;
+    }
+
+    SpellInfoBuilder& WithEffectMiscValue(uint8 effIndex, int32 miscValue)
+    {
+        _entryHelper.WithEffectMiscValue(effIndex, miscValue);
         return *this;
     }
 

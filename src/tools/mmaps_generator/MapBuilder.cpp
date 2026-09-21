@@ -30,6 +30,34 @@
 
 namespace MMAP
 {
+    static void modAlmostUnwalkableTriangles(float const playerSlopeAngle,
+                                             float const* verts, int /*nv*/,
+                                             int const* tris, int nt,
+                                             unsigned char* areas)
+    {
+        float const walkableThr = std::cos(playerSlopeAngle / 180.0f * static_cast<float>(M_PI));
+
+        float norm[3];
+
+        for (int i = 0; i < nt; ++i)
+        {
+            if (areas[i] == RC_NULL_AREA)
+                continue;
+
+            int const* tri = &tris[i * 3];
+
+            float e0[3], e1[3];
+            rcVsub(e0, &verts[tri[1] * 3], &verts[tri[0] * 3]);
+            rcVsub(e1, &verts[tri[2] * 3], &verts[tri[0] * 3]);
+            rcVcross(norm, e0, e1);
+            rcVnormalize(norm);
+
+            if (norm[1] <= walkableThr)
+                areas[i] = NAV_GROUND_STEEP;
+        }
+    }
+
+
     TileBuilder::TileBuilder(MapBuilder* mapBuilder, bool skipLiquid, bool debugOutput) :
             m_debugOutput(debugOutput),
             m_mapBuilder(mapBuilder),
@@ -55,10 +83,9 @@ namespace MMAP
             m_workerThread.join();
     }
 
-    MapBuilder::MapBuilder(Config* config, int mapid, const char* offMeshFilePath, unsigned int threads) :
+    MapBuilder::MapBuilder(Config* config, int mapid, unsigned int threads) :
         m_config             (config),
         m_debugOutput        (config->IsDebugOutputEnabled()),
-        m_offMeshFilePath    (offMeshFilePath),
         m_threads            (threads),
         m_skipContinents     (config->ShouldSkipContinents()),
         m_skipJunkMaps       (config->ShouldSkipJunkMaps()),
@@ -497,8 +524,7 @@ namespace MMAP
         // get bounds of current tile
         float bmin[3], bmax[3];
         m_mapBuilder->getTileBounds(tileX, tileY, allVerts.getCArray(), allVerts.size() / 3, bmin, bmax);
-
-        m_terrainBuilder->loadOffMeshConnections(mapID, tileX, tileY, meshData, m_mapBuilder->m_offMeshFilePath);
+        m_terrainBuilder->loadOffMeshConnections(mapID, tileX, tileY, meshData, m_mapBuilder->getConfig().OffMeshConnections());
 
         // build navmesh tile
         buildMoveMapTile(mapID, tileX, tileY, meshData, bmin, bmax, navMesh);
@@ -660,6 +686,8 @@ namespace MMAP
                 unsigned char* triFlags = new unsigned char[tTriCount];
                 memset(triFlags, NAV_GROUND, tTriCount * sizeof(unsigned char));
                 rcClearUnwalkableTriangles(m_rcContext, tileCfg.walkableSlopeAngle, tVerts, tVertCount, tTris, tTriCount, triFlags);
+                // mod_playerbots (bots should not attempt to use paths that includes slopes beyound 50 degrees)
+                modAlmostUnwalkableTriangles(50.0f, tVerts, tVertCount, tTris, tTriCount, triFlags);
                 rcRasterizeTriangles(m_rcContext, tVerts, tVertCount, tTris, triFlags, tTriCount, *tile.solid, config.walkableClimb);
                 delete[] triFlags;
 
@@ -818,7 +846,7 @@ namespace MMAP
             }
             if (params.vertCount >= 0xffff)
             {
-                printf("%s Too many vertices!                      \n", tileString);
+                printf("%s Too many vertices! %d out of %d!        \n", tileString, params.vertCount, 0xffff);
                 break;
             }
             if (!params.vertCount || !params.verts)
@@ -1060,7 +1088,7 @@ namespace MMAP
         return header.recastConfig == desiredRecastConfig;
     }
 
-    rcConfig MapBuilder::getRecastConfig(const ResolvedMeshConfig &cfg, float bmin[3], float bmax[3]) const
+    rcConfig MapBuilder::getRecastConfig(ResolvedMeshConfig const& cfg, float bmin[3], float bmax[3]) const
     {
         rcConfig config;
         memset(&config, 0, sizeof(rcConfig));

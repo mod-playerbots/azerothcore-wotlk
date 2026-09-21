@@ -27,6 +27,7 @@
 #include "MySQLThreading.h"
 #include "RBAC.h"
 #include "Realm.h"
+#include "ScriptMgr.h"
 #include "StringConvert.h"
 #include "UpdateTime.h"
 #include "VMapFactory.h"
@@ -34,6 +35,7 @@
 #include "WorldSessionMgr.h"
 #include <boost/version.hpp>
 #include <filesystem>
+#include <map>
 #include <numeric>
 #include <openssl/crypto.h>
 #include <openssl/opensslv.h>
@@ -76,6 +78,7 @@ public:
             { "loglevel",     HandleServerSetLogLevelCommand,    rbac::RBAC_PERM_COMMAND_SERVER_SET_LOGLEVEL, Console::Yes },
             { "motd",         HandleServerSetMotdCommand,        rbac::RBAC_PERM_COMMAND_SERVER_SET_MOTD,     Console::Yes },
             { "closed",       HandleServerSetClosedCommand,      rbac::RBAC_PERM_COMMAND_SERVER_SET_CLOSED,   Console::Yes },
+            { "security",     HandleServerSetSecurityCommand,    rbac::RBAC_PERM_COMMAND_SERVER_SET_SECURITY, Console::Yes },
         };
 
         static ChatCommandTable serverCommandTable =
@@ -214,10 +217,11 @@ public:
         handler->PSendSysMessage("Default DBC locale: {}.\nAll available DBC locales: {}", localeNames[defaultLocale], availableLocales);
 
         handler->PSendSysMessage("Using World DB: {}", sWorld->GetDBVersion());
-#ifdef MOD_PLAYERBOTS
-        handler->PSendSysMessage("Using Playerbots DB Revision: {}", sWorld->GetPlayerbotsDBRevision());
-#endif
-        
+
+        std::map<std::string, std::string> moduleDBRevisions;
+        sScriptMgr->OnDatabaseGetDBRevision(moduleDBRevisions);
+        for (auto const& [moduleName, revision] : moduleDBRevisions)
+            handler->PSendSysMessage("Using {} DB Revision: {}", moduleName, revision);
 
         std::string lldb = "No updates found!";
         if (QueryResult resL = LoginDatabase.Query("SELECT name FROM updates ORDER BY name DESC LIMIT 1"))
@@ -245,10 +249,6 @@ public:
         handler->PSendSysMessage("LoginDatabase queue size: {}", LoginDatabase.QueueSize());
         handler->PSendSysMessage("CharacterDatabase queue size: {}", CharacterDatabase.QueueSize());
         handler->PSendSysMessage("WorldDatabase queue size: {}", WorldDatabase.QueueSize());
-#ifdef MOD_PLAYERBOTS
-        handler->PSendSysMessage("PlayerbotsDatabase queue size: {}", PlayerbotsDatabase.QueueSize());
-#endif
-        
 
         if (Acore::Module::GetEnableModulesList().empty())
             handler->PSendSysMessage("No modules are enabled");
@@ -278,6 +278,7 @@ public:
             handler->PSendSysMessage("Connected players: {}. Characters in world: {}. Queue: {}.", activeSessionCount, playerCount, queuedSessionCount);
 
         handler->PSendSysMessage("Connection peak: {}.", connPeak);
+        handler->PSendSysMessage(LANG_COMMAND_SERVER_INFO_SECURITY, uint32(sWorld->GetPlayerSecurityLimit()));
         handler->PSendSysMessage(LANG_UPTIME, secsToTimeString(GameTime::GetUptime().count()));
         handler->PSendSysMessage("Update time diff: {}ms. Last {} diffs summary:", sWorldUpdateTime.GetLastUpdateTime(), sWorldUpdateTime.GetDatasetSize());
         handler->PSendSysMessage("|- Mean: {}ms", sWorldUpdateTime.GetAverageUpdateTime());
@@ -606,6 +607,27 @@ public:
 
         handler->SendErrorMessage(LANG_USE_BOL);
         return false;
+    }
+
+    // Set the minimum security level allowed to log into this realm (realmlist.allowedSecurityLevel)
+    static bool HandleServerSetSecurityCommand(ChatHandler* handler, uint8 level)
+    {
+        if (level > SEC_ADMINISTRATOR)
+        {
+            handler->SendErrorMessage(LANG_COMMAND_SERVER_SET_SECURITY_ERROR, SEC_PLAYER, SEC_ADMINISTRATOR);
+            return false;
+        }
+
+        LoginDatabasePreparedStatement* stmt = LoginDatabase.GetPreparedStatement(LOGIN_UPD_REALMLIST_SECURITY_LEVEL);
+        stmt->SetData(0, level);
+        stmt->SetData(1, realm.Id.Realm);
+        LoginDatabase.Execute(stmt);
+
+        // Apply live; raising the limit kicks any now-disallowed sessions.
+        sWorld->SetPlayerSecurityLimit(AccountTypes(level));
+
+        handler->PSendSysMessage(LANG_COMMAND_SERVER_SET_SECURITY, level);
+        return true;
     }
 
     // Set the level of logging

@@ -26,6 +26,7 @@
 #include "SpellInfo.h"
 #include "SpellMgr.h"
 #include "StringConvert.h"
+#include "TC9Sidecar.h"
 #include "Tokenize.h"
 #include "WorldPacket.h"
 
@@ -348,7 +349,7 @@ void Item::SaveToDB(CharacterDatabaseTransaction trans)
                 uint8 index = 0;
                 CharacterDatabasePreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(uState == ITEM_NEW ? CHAR_REP_ITEM_INSTANCE : CHAR_UPD_ITEM_INSTANCE);
                 stmt->SetData(  index, GetEntry());
-                stmt->SetData(++index, GetOwnerGUID().GetCounter());
+                stmt->SetData(++index, GetOwnerGUID().GetRawValue());
                 stmt->SetData(++index, GetGuidValue(ITEM_FIELD_CREATOR).GetCounter());
                 stmt->SetData(++index, GetGuidValue(ITEM_FIELD_GIFTCREATOR).GetCounter());
                 stmt->SetData(++index, GetCount());
@@ -381,7 +382,7 @@ void Item::SaveToDB(CharacterDatabaseTransaction trans)
                 if ((uState == ITEM_CHANGED) && IsWrapped())
                 {
                     stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPD_GIFT_OWNER);
-                    stmt->SetData(0, GetOwnerGUID().GetCounter());
+                    stmt->SetData(0, GetOwnerGUID().GetRawValue());
                     stmt->SetData(1, guid);
                     trans->Append(stmt);
                 }
@@ -1096,30 +1097,35 @@ Item* Item::CreateItem(uint32 item, uint32 count, Player const* player, bool clo
         return nullptr;                                        //don't create item at zero count
 
     ItemTemplate const* pProto = sObjectMgr->GetItemTemplate(item);
-    if (pProto)
-    {
-        if (count > pProto->GetMaxStackSize())
-            count = pProto->GetMaxStackSize();
-
-        ASSERT_NODEBUGINFO(count != 0 && "pProto->Stackable == 0 but checked at loading already");
-
-        Item* pItem = NewItemOrBag(pProto);
-        uint32 guid = temp ? 0xFFFFFFFF : sObjectMgr->GetGenerator<HighGuid::Item>().Generate();
-        if (pItem->Create(guid, item, player))
-        {
-            pItem->SetCount(count);
-            if (!clone)
-                pItem->SetItemRandomProperties(randomPropertyId ? randomPropertyId : Item::GenerateItemRandomPropertyId(item));
-            else if (randomPropertyId)
-                pItem->SetItemRandomProperties(randomPropertyId);
-            return pItem;
-        }
-        else
-            delete pItem;
-    }
-    else
+    if (!pProto)
         ABORT();
-    return nullptr;
+
+    if (count > pProto->GetMaxStackSize())
+        count = pProto->GetMaxStackSize();
+
+    ASSERT_NODEBUGINFO(count != 0 && "pProto->Stackable == 0 but checked at loading already");
+
+    uint16 realmId = DEFAULT_NON_CROSSREALM_REALM_ID;
+    if (sToCloud9Sidecar->IsCrossrealm() && player)
+        realmId = player->GetGUID().GetRealmID();
+
+    // playerbots: temporary items get a sentinel guid instead of consuming one from the generator
+    uint32 guid = temp ? 0xFFFFFFFF : sObjectMgr->GetGenerator<HighGuid::Item>().Generate(realmId);
+
+    Item* pItem = NewItemOrBag(pProto);
+    if (!pItem->Create(guid, item, player))
+    {
+        delete pItem;
+        return nullptr;
+    }
+
+    pItem->SetCount(count);
+    if (!clone)
+        pItem->SetItemRandomProperties(randomPropertyId ? randomPropertyId : Item::GenerateItemRandomPropertyId(item));
+    else if (randomPropertyId)
+        pItem->SetItemRandomProperties(randomPropertyId);
+
+    return pItem;
 }
 
 Item* Item::CloneItem(uint32 count, Player const* player) const
@@ -1283,12 +1289,10 @@ void Item::ClearSoulboundTradeable(Player* currentOwner)
 
 bool Item::CheckSoulboundTradeExpire()
 {
-    // we have to check the owner for mod_playerbots since bots programically call methods like DestroyItem, 
-    // MoveItemToMail, DestroyItemCount which do not handle soulboundTradeable clearing.
     Player* owner = GetOwner();
     if (!owner)
-        return true; // remove from tradeable list
-    
+        return false; // retry later
+
     if (GetUInt32Value(ITEM_FIELD_CREATE_PLAYED_TIME) + 2 * HOUR < owner->GetTotalPlayedTime())
     {
         ClearSoulboundTradeable(owner);
