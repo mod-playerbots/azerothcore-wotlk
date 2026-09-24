@@ -143,8 +143,8 @@ namespace MMAP
         config.baseUnitDim = ComputeBaseUnitDim(vertexPerMap);
         config.tilesPerMapEdge = vertexPerMap / vertexPerTile;
         config.maxSimplificationError = resolveFloat(
-            [](const TileOverride* t) { return t->maxSimplificationError; },
-            [](const MapOverride* m) { return m->maxSimplificationError; },
+            [](TileOverride const* t) { return t->maxSimplificationError; },
+            [](MapOverride const* m) { return m->maxSimplificationError; },
             _global.maxSimplificationError
         );
         config.cellSizeHorizontal = config.baseUnitDim;

@@ -32,7 +32,6 @@ enum DatabaseHook
     DATABASEHOOK_ON_MODULE_DATABASES_CLOSING,
     DATABASEHOOK_ON_DATABASE_WARN_ABOUT_SYNC_QUERIES,
     DATABASEHOOK_ON_DATABASE_GET_DB_REVISION,
-    DATABASEHOOK_ON_DATABASE_SELECT_INDEX_LOGOUT,
     DATABASEHOOK_END
 };
 
@@ -92,8 +91,6 @@ public:
      * @param revisions Revision string to report, keyed by module name
      */
     virtual void OnDatabaseGetDBRevision(std::map<std::string, std::string>& /*revisions*/) { }
-
-    virtual void OnDatabaseSelectIndexLogout(Player* /*player*/, uint32& /*statementIndex*/, uint32& /*statementParam*/) { }
 };
 
 #endif

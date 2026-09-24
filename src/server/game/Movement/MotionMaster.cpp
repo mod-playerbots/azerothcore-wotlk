@@ -617,10 +617,11 @@ void MotionMaster::MoveTakeoff(uint32 id, float x, float y, float z, float speed
     MoveTakeoff(id, pos, speed, skipAnimation);
 }
 
-void MotionMaster::MoveKnockbackFrom(float srcX, float srcY, float speedXY, float speedZ)
+void MotionMaster::MoveKnockbackFrom(float srcX, float srcY, float speedXY, float speedZ,
+    bool allowClientControlled /*= false*/)
 {
     //this function may make players fall below map
-    if (_owner->IsPlayer() && _owner->IsClientControlled())
+    if (!allowClientControlled && _owner->IsPlayer() && _owner->IsClientControlled())
         return;
 
     if (speedXY <= 0.1f)
@@ -955,47 +956,28 @@ void MotionMaster::MoveRotate(uint32 time, RotateDirection direction)
     Mutate(new RotateMovementGenerator(time, direction), MOTION_SLOT_ACTIVE);
 }
 
-#ifdef MOD_PLAYERBOTS
-void MotionMaster::MoveKnockbackFromForPlayer(float srcX, float srcY, float speedXY, float speedZ)
-{
-    if (speedXY <= 0.1f)
-        return;
-
-    Position dest = _owner->GetPosition();
-    float moveTimeHalf = speedZ / Movement::gravity;
-    float dist = 2 * moveTimeHalf * speedXY;
-    float max_height = -Movement::computeFallElevation(moveTimeHalf, false, -speedZ);
-
-    // Use a mmap raycast to get a valid destination.
-    _owner->MovePositionToFirstCollision(dest, dist, _owner->GetRelativeAngle(srcX, srcY) + float(M_PI));
-
-    Movement::MoveSplineInit init(_owner);
-    init.MoveTo(dest.GetPositionX(), dest.GetPositionY(), dest.GetPositionZ());
-    init.SetParabolic(max_height, 0);
-    init.SetOrientationFixed(true);
-    init.SetVelocity(speedXY);
-    Mutate(new EffectMovementGenerator(init, 0), MOTION_SLOT_CONTROLLED);
-}
-
-// Similar to MovePoint except setting orientationInversed
-void MotionMaster::MovePointBackwards(uint32 id, float x, float y, float z, bool generatePath, bool forceDestination, MovementSlot slot, float orientation /* = 0.0f*/)
+// Same as MovePoint, but the unit keeps facing away from the destination (walks backwards)
+void MotionMaster::MovePointBackwards(uint32 id, float x, float y, float z, bool generatePath, bool forceDestination,
+    MovementSlot slot, float orientation /* = 0.0f*/)
 {
     if (_owner->HasUnitFlag(UNIT_FLAG_DISABLE_MOVE))
         return;
 
     if (_owner->IsPlayer())
     {
-        LOG_DEBUG("movement.motionmaster", "Player ({}) targeted point (Id: {} X: {} Y: {} Z: {})", _owner->GetGUID().ToString(), id, x, y, z);
-        Mutate(new PointMovementGenerator<Player>(id, x, y, z, FORCED_MOVEMENT_NONE, 0.0f, orientation, nullptr, generatePath, forceDestination, std::nullopt, ObjectGuid::Empty, true), slot);
+        LOG_DEBUG("movement.motionmaster", "Player ({}) targeted point backwards (Id: {} X: {} Y: {} Z: {})",
+            _owner->GetGUID().ToString(), id, x, y, z);
+        Mutate(new PointMovementGenerator<Player>(id, x, y, z, FORCED_MOVEMENT_NONE, 0.0f, orientation, nullptr,
+            generatePath, forceDestination, std::nullopt, ObjectGuid::Empty, true), slot);
     }
     else
     {
-        LOG_DEBUG("movement.motionmaster", "Creature ({}) targeted point (ID: {} X: {} Y: {} Z: {})", _owner->GetGUID().ToString(), id, x, y, z);
-        Mutate(new PointMovementGenerator<Creature>(id, x, y, z, FORCED_MOVEMENT_NONE, 0.0f, orientation, nullptr, generatePath, forceDestination, std::nullopt, ObjectGuid::Empty, true), slot);
+        LOG_DEBUG("movement.motionmaster", "Creature ({}) targeted point backwards (ID: {} X: {} Y: {} Z: {})",
+            _owner->GetGUID().ToString(), id, x, y, z);
+        Mutate(new PointMovementGenerator<Creature>(id, x, y, z, FORCED_MOVEMENT_NONE, 0.0f, orientation, nullptr,
+            generatePath, forceDestination, std::nullopt, ObjectGuid::Empty, true), slot);
     }
 }
-
-#endif
 
 void MotionMaster::propagateSpeedChange()
 {
