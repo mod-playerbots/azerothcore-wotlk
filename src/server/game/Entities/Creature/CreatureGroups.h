@@ -122,6 +122,7 @@ public:
 private:
     Creature* m_leader; //Important do not forget sometimes to work with pointers instead synonims :D:D
     CreatureGroupMemberType m_members;
+    std::map<ObjectGuid, FormationInfo> m_memberGuids;
 
     uint32 m_groupID;
     bool m_Formed;

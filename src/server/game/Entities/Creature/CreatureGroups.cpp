@@ -19,6 +19,7 @@
 #include "Creature.h"
 #include "CreatureAI.h"
 #include "Log.h"
+#include "Map.h"
 #include "MoveSplineInit.h"
 #include "ObjectMgr.h"
 #include "QueryResult.h"
@@ -178,7 +179,9 @@ void CreatureGroup::AddMember(Creature* member)
         m_leader = member;
     }
 
-    m_members[member] = sFormationMgr->CreatureGroupMap.find(member->GetSpawnId())->second;
+    FormationInfo const& formationInfo = sFormationMgr->CreatureGroupMap.find(member->GetSpawnId())->second;
+    m_members[member] = formationInfo;
+    m_memberGuids[member->GetGUID()] = formationInfo;
     member->SetFormation(this);
 }
 
@@ -191,6 +194,7 @@ void CreatureGroup::RemoveMember(Creature* member)
     }
 
     m_members.erase(member);
+    m_memberGuids.erase(member->GetGUID());
     member->SetFormation(nullptr);
 }
 
@@ -289,17 +293,23 @@ void CreatureGroup::MemberEvaded(Creature* member)
         return;
     }
 
-    for (auto const& itr : m_members)
+    Map* map = member->GetMap();
+    if (!map)
+        return;
+
+    // Resolve formation members from stable GUIDs: a creature may have been
+    // removed from the map while its old pointer is still present in m_members.
+    std::map<ObjectGuid, FormationInfo> const members = m_memberGuids;
+    for (auto const& [guid, formationInfo] : members)
     {
-        Creature* pMember = itr.first;
-        // This should never happen
+        Creature* pMember = map->GetCreature(guid);
         if (!pMember)
             continue;
 
-        if (pMember == member || pMember->IsInEvadeMode() || !itr.second.HasGroupFlag(std::underlying_type_t<GroupAIFlags>(GroupAIFlags::GROUP_AI_FLAG_EVADE_MASK)))
+        if (pMember == member || pMember->IsInEvadeMode() || !formationInfo.HasGroupFlag(std::underlying_type_t<GroupAIFlags>(GroupAIFlags::GROUP_AI_FLAG_EVADE_MASK)))
             continue;
 
-        if (itr.second.HasGroupFlag(std::underlying_type_t<GroupAIFlags>(GroupAIFlags::GROUP_AI_FLAG_EVADE_TOGETHER)))
+        if (formationInfo.HasGroupFlag(std::underlying_type_t<GroupAIFlags>(GroupAIFlags::GROUP_AI_FLAG_EVADE_TOGETHER)))
         {
             if (!pMember->IsAlive() || !pMember->IsInCombat())
                 continue;
@@ -313,7 +323,7 @@ void CreatureGroup::MemberEvaded(Creature* member)
             if (pMember->IsAlive())
                 continue;
 
-            if (itr.second.HasGroupFlag(std::underlying_type_t<GroupAIFlags>(GroupAIFlags::GROUP_AI_FLAG_DONT_RESPAWN_LEADER_ON_EVADE)) && pMember == m_leader)
+            if (formationInfo.HasGroupFlag(std::underlying_type_t<GroupAIFlags>(GroupAIFlags::GROUP_AI_FLAG_DONT_RESPAWN_LEADER_ON_EVADE)) && pMember == m_leader)
                 continue;
 
             pMember->Respawn();
